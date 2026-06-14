@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 import io
+from services.extractor import extract_resume_text
 
 app = FastAPI()
 
@@ -28,3 +29,11 @@ async def Upload_resume(file:UploadFile = File(...)):
         "content_type":file.content_type,
         "size_bytes":len(contents)
     }
+@app.post("/extract")
+async def extract(file: UploadFile = File(...)):
+    contents = await file.read()
+    try:
+        text = extract_resume_text(contents, file.content_type)
+        return {"text": text, "char_count": len(text)}
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
