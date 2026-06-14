@@ -307,3 +307,346 @@ Key lessons learned:
 * FastAPI provides an excellent developer experience through automatic documentation and validation.
 
 The next milestone is extracting text from uploaded resumes and building the first version of the resume analysis engine.
+# Day 3 - PDF and DOCX Text Extraction
+
+## Goal
+
+Enable the application to extract readable text from uploaded resumes.
+
+Before this stage, the API could only:
+
+* Receive resume files
+* Validate file type
+* Validate file size
+
+The application could not understand the contents of the resume.
+
+The objective was to convert uploaded PDF and DOCX files into plain text that can later be analyzed for skills, experience, education, and ATS scoring.
+
+---
+
+## New Project Structure
+
+Created:
+
+```text
+services/
+└── extractor.py
+```
+
+This separates document-processing logic from API routes.
+
+Benefits:
+
+* Cleaner code organization
+* Easier testing
+* Reusable extraction functions
+* Better scalability
+
+---
+
+## PDF Text Extraction
+
+Implemented:
+
+```python
+def extract_text_from_pdf(file_bytes: bytes) -> str:
+```
+
+### Workflow
+
+```text
+PDF File
+    ↓
+Bytes
+    ↓
+BytesIO Stream
+    ↓
+pdfplumber
+    ↓
+Page Iteration
+    ↓
+Extract Text
+    ↓
+Combine Pages
+```
+
+### Key Concepts Learned
+
+#### BytesIO
+
+```python
+io.BytesIO(file_bytes)
+```
+
+Converts raw bytes into a file-like object.
+
+This allows pdfplumber to process uploaded files without saving them to disk.
+
+#### Page-by-Page Processing
+
+```python
+for page in pdf.pages:
+```
+
+Each PDF page is processed independently.
+
+#### Text Extraction
+
+```python
+page.extract_text()
+```
+
+Returns readable text from the page.
+
+Example:
+
+```text
+Mrinal Kadam
+Computer Engineering Student
+Skills: Python, React, FastAPI
+```
+
+---
+
+## DOCX Text Extraction
+
+Implemented:
+
+```python
+def extract_text_from_docx(file_bytes: bytes) -> str:
+```
+
+### Workflow
+
+```text
+DOCX File
+    ↓
+Bytes
+    ↓
+BytesIO Stream
+    ↓
+python-docx
+    ↓
+Paragraph Extraction
+    ↓
+Combine Text
+```
+
+### Key Concepts Learned
+
+Open DOCX directly from memory:
+
+```python
+docx.Document(io.BytesIO(file_bytes))
+```
+
+Extract paragraphs:
+
+```python
+for para in doc.paragraphs
+```
+
+Ignore empty lines:
+
+```python
+if para.text.strip()
+```
+
+---
+
+## Unified Extraction Interface
+
+Implemented:
+
+```python
+def extract_resume_text(file_bytes, content_type):
+```
+
+Purpose:
+
+Route uploaded files to the correct extraction function.
+
+Logic:
+
+```text
+PDF
+ ↓
+extract_text_from_pdf()
+
+DOCX
+ ↓
+extract_text_from_docx()
+```
+
+This creates a single entry point for future resume processing.
+
+---
+
+## Error Handling
+
+Implemented:
+
+```python
+try:
+    ...
+except Exception:
+```
+
+Benefits:
+
+* Prevents application crashes
+* Returns meaningful error messages
+* Simplifies debugging
+
+Example:
+
+```text
+PDF extraction failed
+DOCX extraction failed
+```
+
+---
+
+## Handling Empty Documents
+
+Implemented:
+
+```python
+if not text.strip():
+```
+
+Possible reasons:
+
+* Scanned PDF
+* Image-only document
+* Corrupted file
+
+Returned message:
+
+```text
+No text found.
+File may be a scanned image.
+Please use a text-based PDF.
+```
+
+---
+
+## Architecture Improvement
+
+Current Flow:
+
+```text
+User Uploads Resume
+         ↓
+Validation
+         ↓
+Read File Bytes
+         ↓
+Text Extraction
+         ↓
+Plain Text
+```
+
+Future Flow:
+
+```text
+User Uploads Resume
+         ↓
+Validation
+         ↓
+Text Extraction
+         ↓
+Skill Detection
+         ↓
+Experience Analysis
+         ↓
+Resume Scoring
+         ↓
+AI Feedback
+```
+
+---
+
+## Challenges Faced
+
+### Understanding File Bytes
+
+Initially unclear how uploaded files could be processed without saving them locally.
+
+Learned:
+
+```python
+io.BytesIO()
+```
+
+creates an in-memory file object.
+
+### PDF Complexity
+
+Not all PDFs contain selectable text.
+
+Some PDFs are actually images.
+
+These require OCR solutions such as:
+
+* Tesseract OCR
+* EasyOCR
+
+This feature will be considered in future versions.
+
+---
+
+## Technical Concepts Learned
+
+### Python
+
+* Bytes
+* Streams
+* BytesIO
+* Exception Handling
+
+### FastAPI
+
+* UploadFile
+* Async File Reading
+
+### Libraries
+
+* pdfplumber
+* python-docx
+
+### Software Design
+
+* Separation of Concerns
+* Service Layer Architecture
+
+---
+
+## Project Status
+
+Completed:
+
+* FastAPI setup
+* Health endpoint
+* Upload endpoint
+* File validation
+* PDF extraction
+* DOCX extraction
+
+Next Steps:
+
+* Connect extractor to upload endpoint
+* Return extracted text preview
+* Implement skill extraction
+* Build resume scoring engine
+
+---
+
+## Reflection
+
+This was the first stage where the application started processing resume content rather than simply receiving files.
+
+The project evolved from a file-upload API into a document-processing system.
+
+This milestone lays the foundation for future AI-powered resume analysis features.
