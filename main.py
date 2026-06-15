@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 import io
 from services.extractor import extract_resume_text
+from models import ExtractionResponse
 
 app = FastAPI()
 
@@ -29,7 +30,7 @@ async def Upload_resume(file:UploadFile = File(...)):
         "content_type":file.content_type,
         "size_bytes":len(contents)
     }
-@app.post("/extract")
+@app.post("/extract",response_model=ExtractionResponse)
 async def extract(file: UploadFile = File(...)):
     contents = await file.read()
     try:
