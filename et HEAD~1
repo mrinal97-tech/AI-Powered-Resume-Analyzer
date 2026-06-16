@@ -1,0 +1,5 @@
+[33m475cfc1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m AI Analysis of Resume
+[33m479cfb9[m[33m ([m[1;31morigin/main[m[33m)[m Calling Claude API for AI analysis of Resume
+[33m837865b[m Added pydantic models and improved model structure
+[33m81beb6f[m updated main.py with response model
+[33mb38383a[m Pydantic models for typed API contracts
