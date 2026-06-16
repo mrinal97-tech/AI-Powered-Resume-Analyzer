@@ -2,6 +2,9 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 import io
 from services.extractor import extract_resume_text
 from models import ExtractionResponse
+import json
+from services.llm import analyze_resume
+from models import AnalysisRequest, AnalysisResponse
 
 app = FastAPI()
 
@@ -38,3 +41,17 @@ async def extract(file: UploadFile = File(...)):
         return {"text": text, "char_count": len(text)}
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+@app.post("/analyze", response_model=AnalysisResponse)
+async def analyze(request: AnalysisRequest):
+    try:
+        raw_json = analyze_resume(
+            request.resume_text,
+            request.job_description
+        )
+        data = json.loads(raw_json)
+        return AnalysisResponse(**data)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500,
+                            detail="LLM returned invalid JSON")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
