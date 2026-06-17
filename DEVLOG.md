@@ -1301,3 +1301,554 @@ Next:
 * ATS Scoring Improvements
 * Job Description Matching
 * Production-Level Error Handling
+Day 6 — Gemini LLM Integration, Debugging, Security Fixes & ATS Analysis
+Goal
+
+Integrate a production-ready LLM into the Resume Analyzer, generate structured ATS feedback, handle API authentication securely, and return validated JSON responses.
+
+Objectives
+Connect FastAPI application with an LLM
+Generate ATS analysis from resume text
+Return structured JSON output
+Secure API keys using environment variables
+Fix GitHub secret scanning issues
+Migrate from Claude to Gemini
+Handle JSON parsing errors
+Improve prompt engineering
+Reduce hallucinations
+Add resume validation
+Tasks Completed
+1. Created LLM Service Layer
+
+Created:
+
+services/
+└── llm.py
+
+Purpose:
+
+Keep AI logic separate from API routes.
+
+Architecture:
+
+main.py
+    ↓
+services/llm.py
+    ↓
+Gemini API
+
+Benefits:
+
+Clean architecture
+Easy provider migration
+Better code maintainability
+Reusable AI service
+2. Added Environment Variables
+
+Created:
+
+.env
+
+Added:
+
+GEMINI_API_KEY=your_api_key
+
+Loaded variables:
+
+from dotenv import load_dotenv
+load_dotenv()
+
+Learned:
+
+Never hardcode API keys inside source code.
+3. Claude API Integration Attempt
+
+Initially integrated:
+
+import anthropic
+
+Created:
+
+client = anthropic.Anthropic(...)
+
+Implemented:
+
+analyze_resume()
+
+Used:
+
+client.messages.create(...)
+
+Goal:
+
+Send resume text to Claude and receive ATS analysis.
+Error 1 — Authentication Failure
+Error
+{
+  "detail": "Could not resolve authentication method"
+}
+Cause
+
+Claude API key not found.
+
+Application could not authenticate.
+
+Solution
+
+Created:
+
+.env
+
+Added:
+
+ANTHROPIC_API_KEY=...
+
+Loaded using:
+
+load_dotenv()
+
+Result:
+
+Authentication successful.
+Error 2 — Claude Billing Limitation
+Problem
+
+Claude API key existed but account had no usable credits.
+
+Impact
+
+Could not continue development.
+
+Decision
+
+Switch AI provider.
+
+Migration:
+
+Claude
+    ↓
+Gemini
+
+Reason:
+
+Easier access
+Free tier available
+Faster experimentation
+4. Migrated To Gemini
+
+Installed:
+
+pip install google-generativeai
+
+Configured:
+
+genai.configure(
+    api_key=os.getenv("GEMINI_API_KEY")
+)
+
+Created:
+
+model = genai.GenerativeModel(...)
+
+Implemented:
+
+response = model.generate_content(prompt)
+
+Learned:
+
+Most AI applications use exactly this pattern:
+
+Input
+   ↓
+Prompt
+   ↓
+LLM
+   ↓
+Response
+Error 3 — Invalid Gemini Model
+Error
+404 models/gemini-1.5-flash is not found
+Cause
+
+Requested model unavailable.
+
+Investigation
+
+Created:
+
+test_models.py
+
+Executed:
+
+for model in genai.list_models():
+    print(model.name)
+
+Discovered:
+
+models/gemini-2.5-flash
+models/gemini-2.5-pro
+models/gemini-2.0-flash
+...
+Fix
+
+Updated:
+
+model="gemini-2.5-flash"
+
+Result:
+
+Model successfully loaded.
+Error 4 — GitHub Push Protection
+Problem
+
+Accidentally committed:
+
+.env
+
+containing API keys.
+
+GitHub Error
+GH013: Repository rule violations found
+
+Push cannot contain secrets
+
+Anthropic API Key detected
+Cause
+
+Sensitive credentials existed in Git history.
+
+Solution
+
+Removed:
+
+git rm --cached .env
+
+Updated:
+
+.gitignore
+
+Added:
+
+.env
+venv/
+__pycache__/
+*.pyc
+
+Committed cleanup.
+
+Important Lesson
+
+Never commit:
+
+API keys
+Passwords
+Tokens
+Credentials
+
+Even deleted files remain inside Git history.
+
+Error 5 — Secret Still Found
+Problem
+
+Even after deleting:
+
+.env
+
+GitHub continued blocking pushes.
+
+Cause
+
+Secret existed in previous commit history.
+
+GitHub scans:
+
+Current Commit
++
+Previous Commits
+Investigation
+
+Used:
+
+git log --oneline
+
+Reviewed commit history.
+
+Performed:
+
+git reset HEAD~1
+
+Created clean commits.
+
+Result:
+
+Secret removed successfully.
+Error 6 — Git Authentication Failure
+Error
+Invalid username or token.
+Password authentication is not supported.
+Cause
+
+GitHub no longer supports password authentication.
+
+Solution
+
+Reauthenticated GitHub account.
+
+Removed old credentials.
+
+Used GitHub login flow again.
+
+Result:
+
+Push successful.
+5. Built ATS Analysis Endpoint
+
+Created:
+
+@app.post("/analyze")
+
+Flow:
+
+Resume Text
+      ↓
+Gemini
+      ↓
+JSON
+      ↓
+Pydantic Validation
+      ↓
+Response
+6. Structured JSON Output
+
+Created prompt requiring:
+
+{
+  "ats_score": 0,
+  "skills_found": [],
+  "missing_skills": [],
+  "improvement_suggestions": [],
+  "experience_level": "",
+  "summary": ""
+}
+
+Benefits:
+
+Machine readable
+Predictable output
+API friendly
+Error 7 — Invalid JSON
+Error
+{
+  "detail": "LLM returned invalid JSON"
+}
+Cause
+
+Gemini returned:
+
+```json
+{
+ ...
+}
+
+instead of pure JSON.
+
+JSON parser failed.
+
+---
+
+## Solution
+
+Added cleanup:
+
+```python
+text = text.replace("```json", "")
+text = text.replace("```", "")
+
+Added debugging:
+
+print(response.text)
+
+Result:
+
+Valid JSON parsing.
+Error 8 — Gemini Rate Limit
+Error
+429 Quota exceeded
+Cause
+
+Free-tier request limit exceeded.
+
+Gemini restricted requests:
+
+5 requests/minute
+Solution
+
+Waited for quota reset.
+
+Learned:
+
+All production APIs have usage limits.
+Error 9 — Hallucinated Skills
+Input
+My resume text here
+Problem
+
+Gemini invented:
+
+Python
+AWS
+Docker
+FastAPI
+
+None were provided.
+
+Cause
+
+LLM inference.
+
+Also called:
+
+Hallucination
+Solution
+
+Prompt updated:
+
+Do NOT infer or invent skills that are not explicitly mentioned.
+
+Result:
+
+More reliable analysis.
+Error 10 — Overly Strict Validation
+Problem
+
+Resume:
+
+Python developer with FastAPI,
+React, MongoDB and Docker experience.
+
+Returned:
+
+{
+  "ats_score": 0
+}
+Cause
+
+Prompt rejected short resumes.
+
+Solution
+
+Updated instructions:
+
+Analyze whatever information is available.
+
+Do NOT reject a resume simply because it is short.
+
+Result:
+
+{
+  "ats_score": 95,
+  "skills_found": [
+    "Python",
+    "FastAPI",
+    "React",
+    "MongoDB",
+    "Docker"
+  ]
+}
+7. Added Resume Validation
+
+Added:
+
+if len(resume_text.split()) < 5:
+    raise ValueError(
+        "Resume text too short for meaningful analysis."
+    )
+
+Purpose:
+
+Prevent unnecessary Gemini API calls.
+
+Benefits:
+
+Faster responses
+Lower API usage
+Reduced cost
+Better validation
+Final Working Flow
+User Resume
+      ↓
+FastAPI Endpoint
+      ↓
+Input Validation
+      ↓
+Gemini API
+      ↓
+Structured JSON
+      ↓
+JSON Parsing
+      ↓
+Pydantic Validation
+      ↓
+Final ATS Response
+Concepts Learned
+Backend Engineering
+FastAPI routing
+Request validation
+Response validation
+Error handling
+Environment variables
+Service layer architecture
+AI Engineering
+Prompt engineering
+Structured output
+LLM integration
+Hallucination control
+Response parsing
+Model selection
+Software Engineering
+Git workflow
+Secret management
+GitHub Push Protection
+API debugging
+Logging
+Architecture design
+Day 6 Outcome
+
+Successfully built a fully functional AI-powered ATS Resume Analyzer capable of:
+
+✅ Accepting resume text
+
+✅ Sending data to Gemini
+
+✅ Generating ATS analysis
+
+✅ Returning structured JSON
+
+✅ Validating responses using Pydantic
+
+✅ Handling API failures
+
+✅ Preventing hallucinations
+
+✅ Managing secrets securely
+
+✅ Following production-style backend architecture
+
+Git Commands Used During Day 6
+git add services/llm.py main.py .gitignore
+git commit -m "Implement Gemini ATS analysis service"
+
+git rm --cached .env
+
+git add .
+git commit -m "Remove secrets and secure environment variables"
+
+git push origin main
+
+git log --oneline
+
+git reset HEAD~1
+
+git status
+
+This Day 6 entry is strong because it documents not only what worked, but also every major debugging challenge, security issue, architectural decision, and lesson learned.
