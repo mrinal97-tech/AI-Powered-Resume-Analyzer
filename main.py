@@ -48,10 +48,25 @@ async def analyze(request: AnalysisRequest):
             request.resume_text,
             request.job_description
         )
+
+        print("JSON TO PARSE:")
+        print(raw_json)
+
         data = json.loads(raw_json)
+
         return AnalysisResponse(**data)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500,
-                            detail="LLM returned invalid JSON")
+
+    except json.JSONDecodeError as e:
+        print("JSON ERROR:", e)
+        print("RAW RESPONSE:", raw_json)
+
+        raise HTTPException(
+            status_code=500,
+            detail="LLM returned invalid JSON"
+        )
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
