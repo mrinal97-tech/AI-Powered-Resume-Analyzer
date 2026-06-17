@@ -1044,3 +1044,260 @@ Day 4 was focused on building a stronger foundation rather than adding visible f
 The project became more professional by introducing typed request and response contracts.
 
 This stage prepares the application for future AI analysis features while keeping the codebase organized, scalable, and easier to maintain.
+# Day 5 — LLM Integration, API Security, and Provider Migration
+
+## Goal
+
+Integrate a Large Language Model (LLM) into the AI Resume Analyzer to analyze extracted resume text and return structured ATS feedback.
+
+---
+
+## What I Built
+
+### 1. Created LLM Service Layer
+
+Created `services/llm.py` to isolate all AI-related logic from the API routes.
+
+Responsibilities:
+
+* Load API credentials from environment variables
+* Connect to the LLM provider
+* Send resume text for analysis
+* Receive structured JSON output
+* Return results to FastAPI endpoints
+
+This follows the software engineering principle of Separation of Concerns, where AI logic is separated from API and business logic.
+
+---
+
+### 2. Designed ATS Analysis Prompt
+
+Created a detailed system prompt instructing the model to return a strict JSON structure.
+
+Expected response format:
+
+```json
+{
+  "ats_score": 85,
+  "skills_found": [],
+  "missing_skills": [],
+  "improvement_suggestions": [],
+  "experience_level": "junior",
+  "summary": "..."
+}
+```
+
+Key learning:
+
+* LLMs perform better with explicit instructions.
+* Structured outputs are easier to parse and validate.
+* Prompt engineering is critical for reliable AI systems.
+
+---
+
+### 3. Integrated FastAPI with LLM Service
+
+Created `/analyze` endpoint.
+
+Workflow:
+
+Resume Text
+↓
+FastAPI Endpoint
+↓
+LLM Service
+↓
+AI Model
+↓
+JSON Response
+↓
+Pydantic Validation
+↓
+Final API Response
+
+This was the first end-to-end AI-powered feature of the project.
+
+---
+
+### 4. Implemented JSON Parsing and Validation
+
+Used:
+
+```python
+json.loads()
+```
+
+to convert the model response from a string into a Python dictionary.
+
+Validated the output using:
+
+```python
+AnalysisResponse
+```
+
+Pydantic model.
+
+Benefits:
+
+* Type safety
+* Consistent API responses
+* Reduced runtime errors
+* Better maintainability
+
+---
+
+## Major Engineering Challenge: Secret Leakage
+
+### What Happened
+
+While integrating the Anthropic API, an API key was accidentally committed into Git history.
+
+GitHub Push Protection immediately blocked the push and reported:
+
+"Push cannot contain secrets"
+
+This was my first experience with GitHub Secret Scanning and Push Protection.
+
+---
+
+### Root Cause
+
+The API key was stored in a tracked file and became part of Git commit history.
+
+Although the file was later removed, GitHub continued blocking the push because the secret still existed in previous commits.
+
+---
+
+### How I Fixed It
+
+1. Added `.env` to `.gitignore`
+
+```gitignore
+.env
+venv/
+__pycache__/
+*.pyc
+```
+
+2. Removed `.env` from Git tracking.
+
+3. Reset problematic commits.
+
+4. Rebuilt clean commits.
+
+5. Learned how Git history affects repository security.
+
+---
+
+## Security Lessons Learned
+
+Never commit:
+
+* API Keys
+* Tokens
+* Passwords
+* Credentials
+
+Always use:
+
+```python
+os.getenv("API_KEY")
+```
+
+with environment variables.
+
+Store secrets inside:
+
+```text
+.env
+```
+
+and ensure:
+
+```text
+.env
+```
+
+is included in `.gitignore`.
+
+This is a standard industry practice used by backend and AI engineers.
+
+---
+
+## Anthropic API Issue
+
+After implementing Claude integration, I discovered that API usage required funded credits.
+
+Without available credits, the API could not be used for project development and testing.
+
+As a result, I decided to switch providers.
+
+---
+
+## Migration Decision: Anthropic → Google Gemini
+
+Reason:
+
+* Easier access for development
+* Free tier availability
+* Suitable for learning and prototyping
+* Simple API integration
+
+Planned changes:
+
+* Replace Anthropic SDK with Gemini SDK
+* Update API configuration
+* Reuse existing prompts
+* Keep FastAPI architecture unchanged
+
+The abstraction provided by `services/llm.py` makes provider migration straightforward.
+
+---
+
+## Concepts Learned
+
+### Backend Engineering
+
+* API integration
+* Environment variables
+* HTTP request lifecycle
+* Error handling
+* JSON processing
+
+### Software Engineering
+
+* Separation of concerns
+* Service layer architecture
+* Git security practices
+* Secret management
+* Version control workflows
+
+### AI Engineering
+
+* LLM integration
+* Prompt engineering
+* Structured outputs
+* JSON validation
+* AI provider abstraction
+
+---
+
+## Project Status
+
+Completed:
+
+* File Upload API
+* PDF Extraction
+* DOCX Extraction
+* Pydantic Models
+* FastAPI Validation
+* LLM Service Layer
+* Analyze Endpoint
+
+Next:
+
+* Gemini API Integration
+* Resume Analysis Pipeline
+* ATS Scoring Improvements
+* Job Description Matching
+* Production-Level Error Handling
