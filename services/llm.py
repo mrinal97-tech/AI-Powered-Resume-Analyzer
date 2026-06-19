@@ -109,3 +109,48 @@ def analyze_resume(
 
     except Exception as e:
      raise ValueError(f"Gemini API Error: {str(e)}")
+   
+# ==========================================
+# STREAMING VERSION
+# ==========================================
+
+def stream_analysis(
+    resume_text: str,
+    job_description: str = None
+):
+    """
+    Streams Gemini response chunk by chunk.
+    """
+
+    if len(resume_text.split()) < 5:
+        yield "Resume text too short for analysis."
+        return
+
+    user_content = f"Resume:\n{resume_text}"
+
+    if job_description:
+        user_content += (
+            f"\n\nJob Description:\n{job_description}"
+        )
+
+    prompt = f"""
+{SYSTEM_PROMPT}
+
+{user_content}
+"""
+
+    try:
+
+        response = model.generate_content(
+            prompt,
+            stream=True
+        )
+
+        for chunk in response:
+          if hasattr(chunk, "text") and chunk.text:
+            print("STREAM CHUNK:", repr(chunk.text))
+            yield chunk.text
+
+    except Exception as e:
+
+        yield f"\nError: {str(e)}"
