@@ -3,7 +3,11 @@ import io
 from services.extractor import extract_resume_text
 from models import ExtractionResponse
 import json
-from services.llm import analyze_resume
+from fastapi.responses import StreamingResponse
+from services.llm import (
+    analyze_resume,
+    stream_analysis
+)
 from models import AnalysisRequest, AnalysisResponse
 
 app = FastAPI()
@@ -70,3 +74,15 @@ async def analyze(request: AnalysisRequest):
             status_code=500,
             detail=str(e)
         )
+@app.post("/analyze/stream")
+async def analyze_stream(
+    request: AnalysisRequest
+):
+
+    return StreamingResponse(
+        stream_analysis(
+            request.resume_text,
+            request.job_description
+        ),
+        media_type="text/plain"
+    )
