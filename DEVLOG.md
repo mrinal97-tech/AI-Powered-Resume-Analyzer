@@ -1578,3 +1578,386 @@ git log --oneline
 git reset HEAD~1
 
 git status
+
+# Day 7 DevLog — Gemini Streaming Integration & Debugging
+
+## Goal
+
+Implement real-time streaming responses from the LLM so users can start receiving ATS analysis immediately instead of waiting for the complete response.
+
+---
+
+## Tasks Completed
+
+### 1. Added Streaming Endpoint
+
+Created a new FastAPI endpoint:
+
+```python
+@app.post("/analyze/stream")
+async def analyze_stream(request: AnalysisRequest):
+    return StreamingResponse(
+        stream_analysis(
+            request.resume_text,
+            request.job_description
+        ),
+        media_type="text/plain"
+    )
+```
+
+Purpose:
+
+* Enable real-time LLM output.
+* Improve perceived performance.
+* Mimic ChatGPT-like typing behavior.
+* Learn FastAPI streaming architecture.
+
+---
+
+### 2. Implemented Gemini Streaming Generator
+
+Created a generator function inside `services/llm.py`.
+
+```python
+def stream_analysis(resume_text, job_description=None):
+
+    response = model.generate_content(
+        prompt,
+        stream=True
+    )
+
+    for chunk in response:
+        yield chunk.text
+```
+
+Purpose:
+
+* Receive partial responses from Gemini.
+* Yield chunks immediately.
+* Reduce waiting time for end users.
+* Understand Python generators and streaming APIs.
+
+---
+
+### 3. Learned Streaming Architecture
+
+Normal Flow:
+
+User
+→ FastAPI
+→ Gemini
+→ Complete Response
+→ User
+
+Streaming Flow:
+
+User
+→ FastAPI
+→ Gemini
+→ Chunk 1
+→ Chunk 2
+→ Chunk 3
+→ User receives output continuously
+
+This architecture is used by:
+
+* ChatGPT
+* Claude
+* Cursor
+* GitHub Copilot
+* Windsurf
+
+---
+
+## Errors Encountered
+
+### Error 1: Streaming Response Appeared All At Once
+
+Expected:
+
+```text
+ATS Score...
+Skills...
+Suggestions...
+```
+
+appearing gradually.
+
+Actual:
+
+Entire response appeared after generation completed.
+
+Example:
+
+```text
+This is a good start...
+Here's ATS feedback...
+```
+
+displayed all at once.
+
+---
+
+### Root Cause Investigation
+
+Initially suspected:
+
+* Gemini not streaming
+* Generator not working
+* FastAPI buffering response
+
+Added debugging:
+
+```python
+print(chunk.text)
+```
+
+to verify whether Gemini was producing chunks.
+
+---
+
+### Discovery
+
+The issue was not FastAPI.
+
+The issue was testing through Swagger UI:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Swagger buffers the response before displaying it.
+
+Therefore:
+
+Backend Streaming = Working
+
+Frontend Display = Buffered
+
+Result:
+
+Streaming could not be visually observed inside Swagger.
+
+---
+
+### Solution
+
+Use:
+
+```bash
+curl -N
+```
+
+instead of Swagger.
+
+Example:
+
+```bash
+curl -N -X POST http://127.0.0.1:8000/analyze/stream
+```
+
+The `-N` flag disables buffering and allows streamed chunks to be displayed immediately.
+
+---
+
+### Error 2: Response Returned ATS Report Instead of JSON
+
+Expected:
+
+```json
+{
+  "ats_score": 82
+}
+```
+
+Received:
+
+```text
+This is a good start...
+Strong matches...
+Missing keywords...
+```
+
+---
+
+### Root Cause
+
+Streaming endpoint was using a different prompt than the JSON endpoint.
+
+Normal endpoint:
+
+```python
+SYSTEM_PROMPT
+```
+
+Streaming endpoint:
+
+```python
+Analyze this resume and provide ATS feedback
+```
+
+Gemini therefore returned human-readable text.
+
+---
+
+### Solution
+
+Use the same SYSTEM_PROMPT if JSON streaming is required.
+
+Alternatively:
+
+Keep two endpoints:
+
+```text
+/analyze
+```
+
+Structured JSON output.
+
+```text
+/analyze/stream
+```
+
+Human-readable streaming output.
+
+This is the preferred production design.
+
+---
+
+### Error 3: Understanding Chunking
+
+Initially assumed chunking means:
+
+```text
+Sentence 1
+Sentence 2
+Sentence 3
+```
+
+arrive separately.
+
+Learned that chunking actually means:
+
+```text
+Token
+Token
+Token
+```
+
+or
+
+```text
+Small text fragments
+```
+
+generated incrementally by the model.
+
+Example:
+
+Chunk 1:
+
+```text
+ATS
+```
+
+Chunk 2:
+
+```text
+ Score
+```
+
+Chunk 3:
+
+```text
+: 85
+```
+
+---
+
+## Concepts Learned
+
+### StreamingResponse
+
+Used for sending data incrementally.
+
+```python
+StreamingResponse(generator())
+```
+
+instead of:
+
+```python
+return response
+```
+
+---
+
+### Python Generators
+
+A generator produces values one at a time.
+
+Example:
+
+```python
+yield chunk.text
+```
+
+instead of:
+
+```python
+return chunk.text
+```
+
+This enables streaming.
+
+---
+
+### Perceived Latency
+
+Even if total generation time remains 10 seconds:
+
+Without Streaming:
+
+User waits 10 seconds.
+
+With Streaming:
+
+User sees output after 1 second.
+
+This improves user experience significantly.
+
+---
+
+## Engineering Learnings
+
+Backend Engineering:
+
+* Streaming APIs
+* Response buffering
+* FastAPI StreamingResponse
+* Generator functions
+
+AI Engineering:
+
+* Token generation
+* LLM streaming
+* Real-time AI interactions
+
+Software Engineering:
+
+* User experience optimization
+* Perceived performance improvements
+* Production-grade API design
+
+---
+
+## Outcome
+
+Successfully implemented Gemini streaming architecture and understood how modern AI systems deliver responses in real time.
+
+The Resume Analyzer now supports both:
+
+1. Structured JSON analysis endpoint.
+2. Real-time streaming analysis endpoint.
+
+This architecture closely resembles production systems used in modern AI applications.
