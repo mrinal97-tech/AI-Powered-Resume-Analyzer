@@ -1961,3 +1961,342 @@ The Resume Analyzer now supports both:
 2. Real-time streaming analysis endpoint.
 
 This architecture closely resembles production systems used in modern AI applications.
+
+# Week 1 Summary — June 2026
+
+## What I Built
+
+### Backend Foundation (FastAPI)
+
+* Set up a FastAPI backend project structure.
+* Created and tested API endpoints:
+
+  * `/health`
+  * `/upload`
+  * `/extract`
+  * `/analyze`
+  * `/analyze/stream`
+* Learned request handling, response models, and API testing using Swagger UI.
+
+### Resume Text Extraction
+
+* Implemented PDF text extraction using `pdfplumber`.
+* Implemented DOCX text extraction using `python-docx`.
+* Built a unified extraction service that:
+
+  * Detects file type.
+  * Routes to the correct extractor.
+  * Returns plain resume text.
+* Added validation for scanned or empty documents.
+
+### Pydantic Models
+
+* Created strongly typed request and response models.
+* Added:
+
+  * `AnalysisRequest`
+  * `AnalysisResponse`
+  * `ExtractionResponse`
+  * `ErrorResponse`
+* Learned how FastAPI performs automatic validation and API documentation generation using Pydantic.
+
+### LLM Integration
+
+* Initially integrated Anthropic Claude API.
+* Designed a structured ATS analysis prompt.
+* Implemented JSON-only responses for:
+
+  * ATS score
+  * Skills found
+  * Missing skills
+  * Improvement suggestions
+  * Experience level
+  * Resume summary
+
+### Gemini Migration
+
+* Discovered that Anthropic API requires billing/funding before usage.
+* Migrated the entire LLM service from Claude to Gemini.
+* Updated API integration logic.
+* Tested Gemini model availability and compatibility.
+* Implemented JSON parsing and response validation.
+
+### Streaming Endpoint
+
+* Implemented `/analyze/stream`.
+* Learned FastAPI `StreamingResponse`.
+* Learned Python generators and `yield`.
+* Implemented Gemini streaming responses.
+* Studied how ChatGPT, Claude, Cursor, and Copilot use streaming.
+
+### Git & GitHub Workflow
+
+* Practiced:
+
+  * `git add`
+  * `git commit`
+  * `git push`
+  * `git reset`
+  * `git rm --cached`
+  * `git status`
+  * `git log`
+* Managed project version control independently.
+
+---
+
+## Errors I Hit and Fixed
+
+### 1. Anthropic Authentication Error
+
+Error:
+
+```text
+Could not resolve authentication method
+```
+
+Cause:
+
+* API key not loaded properly.
+
+Solution:
+
+* Used `.env`.
+* Added `load_dotenv()`.
+* Verified environment variable loading.
+
+---
+
+### 2. Anthropic Billing Restriction
+
+Error:
+
+```text
+Claude API key valid but requests fail
+```
+
+Cause:
+
+* Anthropic requires funded account for API usage.
+
+Solution:
+
+* Migrated to Gemini API.
+
+---
+
+### 3. Gemini Model Not Found
+
+Error:
+
+```text
+404 model not found
+```
+
+Cause:
+
+* Using outdated model name.
+
+Solution:
+
+* Listed available Gemini models.
+* Switched to supported model.
+
+---
+
+### 4. Invalid JSON From LLM
+
+Error:
+
+```text
+LLM returned invalid JSON
+```
+
+Cause:
+
+* Gemini sometimes returned markdown or extra text.
+
+Solution:
+
+* Strengthened system prompt.
+* Added JSON cleanup logic.
+* Added parsing validation.
+
+---
+
+### 5. Resume Too Short
+
+Problem:
+
+* Small test resumes produced unrealistic results.
+
+Solution:
+
+* Added validation rules.
+* Improved prompt instructions.
+* Added insufficient-information fallback response.
+
+---
+
+### 6. GitHub Secret Scanning Failure
+
+Error:
+
+```text
+GH013: Push cannot contain secrets
+```
+
+Cause:
+
+* Accidentally committed `.env` file containing API key.
+
+Solution:
+
+* Removed `.env`.
+* Added `.env` to `.gitignore`.
+* Reset commits.
+* Cleaned Git history.
+* Recommitted safely.
+
+---
+
+### 7. Git Authentication Failure
+
+Error:
+
+```text
+Invalid username or token
+```
+
+Cause:
+
+* GitHub password authentication removed.
+
+Solution:
+
+* Reauthenticated Git.
+* Updated credentials.
+
+---
+
+### 8. Streaming Appeared Not To Work
+
+Problem:
+
+* Entire response appeared at once.
+
+Cause:
+
+* Testing inside Swagger UI.
+* Swagger buffers responses.
+
+Solution:
+
+* Learned to test streaming using `curl -N`.
+* Added chunk debugging.
+
+---
+
+### 9. ATS Analysis Hallucination
+
+Problem:
+
+* LLM inferred skills not explicitly present.
+
+Solution:
+
+* Updated system prompt:
+
+  * Only use explicit skills.
+  * Do not invent technologies.
+  * Do not hallucinate experience.
+
+---
+
+## What Surprised Me
+
+* FastAPI automatically generates API documentation.
+* Pydantic performs validation with very little code.
+* LLM prompts require careful engineering to avoid hallucinations.
+* Most production AI systems depend heavily on prompt design.
+* Streaming is more complex than simply setting `stream=True`.
+* GitHub secret scanning is extremely strict and can block pushes.
+* A single leaked API key can prevent deployment.
+* Backend debugging often takes longer than writing the actual feature.
+* Understanding the flow of data is more important than writing code quickly.
+
+---
+
+## What I Still Don't Fully Understand
+
+### Backend
+
+* Async programming (`async` vs `sync`) in depth.
+* FastAPI dependency injection.
+* Middleware architecture.
+* Background tasks.
+* Authentication and authorization systems.
+* Database integration using SQLAlchemy.
+
+### AI Engineering
+
+* Tokenization inside LLMs.
+* How Gemini generates tokens internally.
+* Embeddings and vector databases.
+* RAG (Retrieval-Augmented Generation).
+* Context window management.
+* Model fine-tuning.
+
+### Software Engineering
+
+* Production deployment architecture.
+* Docker containers.
+* CI/CD pipelines.
+* Kubernetes.
+* Microservices communication.
+* System design for large-scale applications.
+
+### Streaming
+
+* Server-Sent Events (SSE).
+* WebSockets.
+* Why buffering happens in some clients.
+* Real-time frontend streaming implementation.
+
+---
+
+## Next Week Goal
+
+### Frontend Development
+
+* Start React frontend.
+* Learn React component architecture.
+* Create ATS Dashboard UI.
+
+### Integration
+
+* Connect React frontend with FastAPI backend.
+* Connect file upload UI to `/extract`.
+* Display extracted resume text.
+* Connect analysis results to frontend.
+
+### Features
+
+* Upload resume directly from browser.
+* View extracted text before analysis.
+* Show ATS score visually.
+* Display missing skills and recommendations.
+* Build a professional dashboard.
+
+### Learning Goals
+
+* React Hooks.
+* API integration using Axios.
+* State management.
+* Frontend file handling.
+* End-to-end Resume Analyzer workflow.
+
+---
+
+## Week 1 Outcome
+
+Successfully built the complete backend foundation of the AI-Powered Resume Analyzer, including document extraction, structured ATS analysis, Gemini integration, streaming support, and GitHub version control. Gained practical experience in FastAPI, Pydantic, API design, prompt engineering, debugging, environment management, and production development workflows.
