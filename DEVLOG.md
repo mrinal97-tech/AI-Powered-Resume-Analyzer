@@ -2300,3 +2300,75 @@ Solution:
 ## Week 1 Outcome
 
 Successfully built the complete backend foundation of the AI-Powered Resume Analyzer, including document extraction, structured ATS analysis, Gemini integration, streaming support, and GitHub version control. Gained practical experience in FastAPI, Pydantic, API design, prompt engineering, debugging, environment management, and production development workflows.
+
+# Dev Log – Day 8
+## Tasks Completed
+
+### 1. Resume Upload Module
+
+* Implemented drag-and-drop resume upload functionality using React Dropzone.
+* Added support for PDF and DOCX file formats.
+* Restricted uploads to a single file at a time.
+* Added file validation for supported document types.
+
+### 2. Backend Integration
+
+* Connected frontend upload component with backend API endpoint (`/extract`) using Axios.
+* Implemented FormData-based file transfer from frontend to backend.
+* Successfully sent uploaded resumes to the extraction service.
+
+### 3. UI State Management
+
+* Added upload status handling:
+
+  * Idle
+  * Uploading
+  * Success
+  * Error
+* Displayed user-friendly messages for each state.
+* Improved drag-and-drop visual feedback using Tailwind CSS.
+
+### 4. Error Handling
+
+* Added API error handling using try-catch blocks.
+* Displayed backend error messages on the frontend.
+* Improved debugging by analyzing upload and API response failures.
+
+### 5. GitHub Repository Maintenance
+
+* Resolved GitHub Push Protection issue caused by accidentally committing API keys in the `.env` file.
+* Added `.env` to `.gitignore`.
+* Removed tracked secrets from Git history.
+* Updated repository to follow secure credential management practices.
+
+## Concepts Learned
+
+* FormData and multipart/form-data.
+* File upload workflow in React.
+* Axios POST requests for file transfer.
+* Frontend-to-backend communication.
+* Git secret scanning and GitHub Push Protection.
+
+## Challenges Faced
+
+* MIME type configuration errors in React Dropzone.
+* Understanding FormData and multipart request structure.
+* GitHub push rejection due to exposed API keys.
+
+## Solutions Implemented
+
+* Corrected MIME type definitions.
+* Studied multipart/form-data request flow.
+* Removed sensitive files from Git tracking and updated `.gitignore`.
+
+## Progress Summary
+
+Today the resume upload pipeline became fully functional. Users can now upload resumes, send them to the backend for processing, and receive extracted text successfully. Security issues related to secret exposure were also addressed.
+
+## Next Steps (Day 9)
+
+* Implement resume text display component.
+* Add resume scoring functionality.
+* Integrate Gemini/OpenAI analysis.
+* Extract skills, education, and experience sections.
+* Improve UI/UX and loading indicators.
