@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 import io
+from fastapi.middleware.cors import CORSMiddleware
 from services.extractor import extract_resume_text
 from models import ExtractionResponse
 import json
@@ -11,6 +12,13 @@ from services.llm import (
 from models import AnalysisRequest, AnalysisResponse
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/health")
 def health():
