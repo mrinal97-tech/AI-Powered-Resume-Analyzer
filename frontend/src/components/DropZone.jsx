@@ -14,7 +14,7 @@ const onDrop = async (acceptedFiles) => {
     setStatus('uploading')
     setError(null)
 
-    const FormData = new FormData()
+    const formData = new formData()
     formData.append('file', file)
      
     try {
