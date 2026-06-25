@@ -25,9 +25,18 @@ const onDrop = async (acceptedFiles) => {
       onExtracted(res.data.text)
       setStatus('done')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Upload failed')
-      setStatus('error')
-    }
+  console.error("FULL ERROR:", err)
+  console.error("RESPONSE:", err.response)
+  console.error("DATA:", err.response?.data)
+
+  setError(
+    JSON.stringify(err.response?.data) ||
+    err.message ||
+    "Upload failed"
+  )
+
+  setStatus("error")
+}
 }
   
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
