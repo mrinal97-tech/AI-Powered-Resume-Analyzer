@@ -1,10 +1,12 @@
 import { useState } from "react"
 import DropZone from './components/DropZone'
 import StreamingResult from './components/StreamingResult'
+import ResultsDashboard from "./components/ResultsDashboard"
 
 function App() {
   const [resumeText, setResumeText] = useState('')
   const [jobDescription, setJobDescription] = useState('')
+  const [analysisData, setAnalysisData] = useState(null)
 
   return (
     <div className="max-w-2xl mx-auto p-8">
@@ -21,9 +23,12 @@ function App() {
             onChange={e => setJobDescription(e.target.value)}
           />
           <StreamingResult
-            resumeText={resumeText}
-            jobDescription={jobDescription}
-          />
+        resumeText={resumeText}
+        jobDescription={jobDescription}
+        onAnalysisComplete={setAnalysisData}
+      />
+
+      <ResultsDashboard data={analysisData} />
         </>
       )}
     </div>
