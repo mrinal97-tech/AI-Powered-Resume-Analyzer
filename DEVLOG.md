@@ -2502,5 +2502,114 @@ Successfully built a resume upload interface capable of uploading PDF and DOCX f
 
 ---
 
+# Day 10 – Streaming AI Analysis & CORS Debugging
+
+## Goal
+
+Implement live AI analysis between React, FastAPI, and Gemini while learning streaming architecture.
+
+---
+
+## Tasks Completed
+
+### Streaming Component
+
+* Created `StreamingResult.jsx`.
+* Added Analyze button.
+* Implemented loading state.
+* Connected frontend to FastAPI streaming endpoint.
+
+### Streaming Workflow
+
+```
+React
+   ↓
+FastAPI
+   ↓
+Gemini
+   ↓
+StreamingResponse
+   ↓
+React
+```
+
+### Browser Streams
+
+* Used `response.body.getReader()` to receive streamed AI responses.
+* Used `TextDecoder()` to convert streamed bytes into readable text.
+* Displayed streamed output dynamically using React state.
+
+---
+
+## Errors Encountered & Solutions
+
+### Error 1 – CORS Policy Blocked Request
+
+Problem:
+
+```
+Access-Control-Allow-Origin
+```
+
+Cause:
+
+* Frontend was running on **localhost:5174**.
+* FastAPI only allowed **localhost:5173**.
+
+Solution:
+
+* Added `CORSMiddleware`.
+* Updated allowed origins.
+* Restarted FastAPI.
+
+---
+
+### Error 2 – Network Error
+
+Cause:
+
+* Incorrect frontend environment configuration.
+
+Solution:
+
+* Fixed `.env` configuration.
+* Verified backend endpoint.
+* Restarted Vite.
+
+---
+
+### Error 3 – Upload Failed
+
+Investigation:
+
+* Used Console logs.
+* Inspected Network tab.
+* Verified backend responses.
+* Checked request URLs.
+
+Successfully resolved all frontend-backend communication issues.
+
+---
+
+## Concepts Learned
+
+* Browser Streams
+* StreamingResponse
+* Fetch API
+* TextDecoder
+* Readable Streams
+* CORS
+* Middleware
+* Cross-Origin Communication
+
+---
+
+## Outcome
+
+Successfully connected React with FastAPI and Gemini for AI analysis while learning how streaming responses work internally and resolving frontend-backend communication issues.
+
+---
+
+
 
 
