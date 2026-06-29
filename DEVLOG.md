@@ -2372,3 +2372,135 @@ Today the resume upload pipeline became fully functional. Users can now upload r
 * Integrate Gemini/OpenAI analysis.
 * Extract skills, education, and experience sections.
 * Improve UI/UX and loading indicators.
+
+# Day 9 – Resume Upload UI & Backend Integration
+
+## Goal
+
+Build the frontend upload interface and connect it with the FastAPI backend to extract text from PDF and DOCX resumes.
+
+---
+
+## Tasks Completed
+
+### Resume Upload Interface
+
+* Created the `DropZone.jsx` component using **React Dropzone**.
+* Implemented drag-and-drop functionality for uploading resumes.
+* Added support for **PDF** and **DOCX** file formats.
+* Restricted uploads to a single resume file.
+
+### Backend Integration
+
+* Connected the React frontend with the FastAPI backend using **Axios**.
+* Implemented the `POST /extract` endpoint for uploading resumes.
+* Successfully extracted resume text and stored it in React state.
+
+### FormData Implementation
+
+* Learned how browsers upload files using `multipart/form-data`.
+* Implemented `FormData` for sending resume files to the backend.
+
+### Resume Extraction Workflow
+
+```
+User Uploads Resume
+        ↓
+React Dropzone
+        ↓
+Axios POST /extract
+        ↓
+FastAPI Backend
+        ↓
+PDF/DOCX Text Extraction
+        ↓
+Extracted Resume Text
+        ↓
+Stored in React State
+```
+
+---
+
+## Errors Encountered & Solutions
+
+### Error 1 – FormData Variable Name
+
+Problem:
+
+* Accidentally declared `FormData` but used `formData`.
+
+Cause:
+
+* JavaScript is case-sensitive.
+
+Solution:
+
+* Corrected the variable name to `formData`.
+
+---
+
+### Error 2 – Upload Stuck at "Extracting text..."
+
+Problem:
+
+* Upload never completed.
+
+Investigation:
+
+* Used browser Console and Network tab.
+* Added debugging logs to inspect API requests.
+
+Solution:
+
+* Identified frontend request issues and fixed them.
+
+---
+
+### Error 3 – Undefined API URL
+
+Problem:
+
+* Upload request was sent to:
+
+```
+/undefined/extract
+```
+
+Cause:
+
+* `VITE_API_URL` was missing.
+
+Solution:
+
+* Created frontend `.env` file.
+* Added:
+
+```
+VITE_API_URL=http://localhost:8000
+```
+
+* Restarted the Vite development server.
+
+---
+
+## Concepts Learned
+
+* React Dropzone
+* FormData
+* Axios
+* File Upload APIs
+* React State Management
+* Backend Integration
+* Browser Developer Tools
+* Environment Variables (Vite)
+
+---
+
+## Outcome
+
+Successfully built a resume upload interface capable of uploading PDF and DOCX files, sending them to FastAPI, extracting resume text, and storing the extracted content for AI analysis.
+
+---
+
+
+
