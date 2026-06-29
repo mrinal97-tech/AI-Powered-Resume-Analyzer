@@ -2682,6 +2682,102 @@ Successfully transformed raw AI-generated JSON into a visually appealing ATS das
 
 ---
 
+# Day 12 – Dashboard Integration & Analysis Architecture
+
+## Goal
+
+Integrate structured AI analysis with the frontend dashboard and improve application architecture.
+
+---
+
+## Tasks Completed
+
+### Dashboard Integration
+
+* Added `analysisData` state in `App.jsx`.
+* Integrated `ResultsDashboard` into the main application.
+* Connected dashboard with AI analysis results.
+
+### React Component Communication
+
+Implemented data flow:
+
+```
+DropZone
+     ↓
+StreamingResult
+     ↓
+App State
+     ↓
+ResultsDashboard
+```
+
+using React props and state lifting.
+
+---
+
+### Analysis Architecture
+
+Separated application into two independent API workflows.
+
+#### Structured Analysis
+
+```
+POST /analyze
+```
+
+Returns structured JSON used by:
+
+* ATS Score
+* Skills
+* Missing Skills
+* Experience Level
+* Summary
+* Dashboard Visualization
+
+#### Streaming Analysis
+
+```
+POST /analyze/stream
+```
+
+Returns streamed AI responses used for:
+
+* Live output
+* Streaming demonstrations
+* Progressive response rendering
+
+---
+
+## Problem Solved
+
+Initially attempted to use streamed text directly for dashboard rendering.
+
+Discovered that the dashboard requires structured JSON rather than streamed text.
+
+Refactored the frontend to consume the `/analyze` endpoint for dashboard rendering while keeping `/analyze/stream` for streaming demonstrations.
+
+---
+
+## Concepts Learned
+
+* Parent-Child Communication
+* React Props
+* State Lifting
+* JSON Parsing
+* Dashboard Architecture
+* Separation of Concerns
+* Structured vs Streaming AI Responses
+
+---
+
+## Outcome
+
+Successfully completed the end-to-end AI analysis workflow, integrating FastAPI, Gemini, and React into a structured ATS dashboard while maintaining a clean and scalable application architecture.
+
+---
+
+
 
 
 
