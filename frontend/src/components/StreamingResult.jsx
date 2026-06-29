@@ -1,24 +1,34 @@
 import { useState } from "react";
 
-export default function StreamingResult({ resumeText, jobDescription }){
-    const[output , setOutput] = useState('')
+export default function StreamingResult({ resumeText, jobDescription, onAnalysisComplete}){
     const[loading , setLoading] = useState(false)
 
     const runAnalysis = async() =>{
-        setOutput('')
         setLoading(true)
     
-    const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/analyze/stream`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    try{
+      const response   = await fetch(
+         `${import.meta.env.VITE_API_URL}/analyze`,
+         {
+          method:'POST',
+          headers: {
+          "Content-Type": "application/json",
+         },
+         body: JSON.stringify({
           resume_text: resumeText,
-          job_description: jobDescription || null
-        })
-      }
-    )
+          job_description: jobDescription || null,
+         }),
+    }
+  )
+      const data = await response.json()
+
+    onAnalysisComplete(data)
+
+  } catch (err) {
+    console.error(err)
+  }
+      
+    
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
 
@@ -40,12 +50,7 @@ export default function StreamingResult({ resumeText, jobDescription }){
         {loading ? 'Analyzing...' : 'Analyze Resume'}
       </button>
 
-      {output && (
-        <pre className="mt-4 bg-gray-900 text-green-400 p-4
-                        rounded-lg text-sm overflow-auto">
-          {output}
-        </pre>
-      )}
+      
     </div>
   )
 }
