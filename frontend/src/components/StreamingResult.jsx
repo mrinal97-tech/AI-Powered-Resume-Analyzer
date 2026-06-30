@@ -22,22 +22,24 @@ export default function StreamingResult({ resumeText, jobDescription, onAnalysis
   )
       const data = await response.json()
 
-    onAnalysisComplete(data)
+      onAnalysisComplete(data)
 
-  } catch (err) {
-    console.error(err)
+  }   catch (err) {
+      console.error(err)
   }
       
     
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
+      try{
+        const data = await response.json()
+         
+        console.log("Analysis Result :",data)
 
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      setOutput(prev => prev + decoder.decode(value))
-    }
-    setLoading(false)
+        onAnalysisComplete(data)
+      }catch(err){
+        console.log("Analysis Error:",err)
+      }finally{
+        setLoading(false)
+      }
   }
   return (
     <div className="mt-6">
