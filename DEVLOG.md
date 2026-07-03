@@ -3069,6 +3069,206 @@ Successfully transformed the AI Resume Analyzer into a polished, portfolio-ready
 
 ---
 
+# Day 15 – PostgreSQL Setup with SQLAlchemy & Supabase
+
+## Goal
+
+Set up a production-ready PostgreSQL database for the AI Resume Analyzer using Supabase, configure SQLAlchemy ORM, and establish the backend database connection.
+
+---
+
+## Tasks Completed
+
+### Database Technology Selection
+
+* Chose **PostgreSQL** as the primary relational database.
+* Selected **Supabase** as the hosted PostgreSQL provider instead of installing PostgreSQL locally.
+* Learned the advantages of using a managed cloud database for deployment and scalability.
+
+---
+
+### Installed Database Dependencies
+
+Installed the required Python packages:
+
+```bash
+pip install sqlalchemy psycopg2-binary alembic
+```
+
+Updated project dependencies:
+
+```bash
+pip freeze > requirements.txt
+```
+
+---
+
+### SQLAlchemy Setup
+
+Created the database configuration file.
+
+Implemented:
+
+* Database Engine
+* Session Factory
+* Declarative Base
+* Database Dependency (`get_db()`)
+
+Configured SQLAlchemy to establish a connection with PostgreSQL through the database URL stored in the environment variables.
+
+---
+
+### Environment Configuration
+
+Added a new environment variable:
+
+```env
+DATABASE_URL=postgresql://username:password@host:5432/database
+```
+
+Kept database credentials securely inside the `.env` file instead of hardcoding them.
+
+---
+
+### Supabase Project Setup
+
+Successfully:
+
+* Created a Supabase account.
+* Created a new organization.
+* Created a PostgreSQL project.
+* Selected the nearest deployment region.
+* Configured a secure database password.
+* Explored the Database dashboard.
+* Learned how to obtain the PostgreSQL connection string.
+
+---
+
+### Database Connection Architecture
+
+Understood the complete backend database workflow:
+
+```text
+FastAPI
+    ↓
+SQLAlchemy ORM
+    ↓
+psycopg2 Driver
+    ↓
+PostgreSQL Database (Supabase)
+```
+
+---
+
+### SQLAlchemy Concepts Learned
+
+Studied the purpose of:
+
+* `create_engine()`
+* `sessionmaker()`
+* `declarative_base()`
+* Database Sessions
+* Database Engine
+* ORM (Object Relational Mapping)
+
+Learned how SQLAlchemy converts Python classes into PostgreSQL tables.
+
+---
+
+### Dependency Injection
+
+Implemented:
+
+```python
+def get_db():
+```
+
+and understood how FastAPI automatically provides a database session for every API request while safely closing the connection after the request completes.
+
+---
+
+### Database Session Lifecycle
+
+Learned how a database request flows:
+
+```text
+Client Request
+      ↓
+FastAPI Route
+      ↓
+get_db()
+      ↓
+SessionLocal()
+      ↓
+Execute Database Queries
+      ↓
+Return Response
+      ↓
+Close Database Session
+```
+
+---
+
+## Concepts Learned
+
+* PostgreSQL
+* Supabase
+* SQLAlchemy ORM
+* psycopg2 Driver
+* Alembic (Introduction)
+* Database Engine
+* Database Session
+* ORM Mapping
+* Dependency Injection
+* Environment Variables
+* Hosted Cloud Database
+* Database Connection String
+* Production Backend Architecture
+
+---
+
+## Challenges Faced
+
+### Understanding the Connection String
+
+Initially found the PostgreSQL URI confusing.
+
+Learned that it contains:
+
+* Database Type
+* Username
+* Password
+* Host
+* Port
+* Database Name
+
+and is used by SQLAlchemy to establish a secure connection.
+
+---
+
+### Understanding SQLAlchemy Components
+
+Initially confused between:
+
+* Engine
+* Session
+* Base
+
+After studying each component individually, understood that:
+
+* **Engine** manages the connection to PostgreSQL.
+* **Session** performs database operations.
+* **Base** is the parent class for all database models.
+
+---
+
+## Outcome
+
+Successfully prepared the backend for database integration by configuring SQLAlchemy, setting up a hosted PostgreSQL database on Supabase, securing the database credentials using environment variables, and understanding the complete database architecture that will be used for storing users, resumes, and AI analysis history.
+
+---
+
+
 
 
 
