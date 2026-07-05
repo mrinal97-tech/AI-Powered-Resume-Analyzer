@@ -3268,6 +3268,643 @@ Successfully prepared the backend for database integration by configuring SQLAlc
 
 ---
 
+# Day 15–16 DevLog — PostgreSQL, SQLAlchemy Models, Foreign Keys & Alembic Migration Setup
+
+## Goal
+
+Add database support to the AI Resume Analyzer using PostgreSQL, SQLAlchemy ORM, Supabase, and Alembic migrations.
+
+The goal was to move the project from a temporary analysis-only app to a system that can later store users, uploaded resumes, and ATS analysis history.
+
+---
+
+## What I Built
+
+### 1. PostgreSQL Database Setup
+
+Created a hosted PostgreSQL database using Supabase.
+
+Added database connection string to `.env`:
+
+```env
+DATABASE_URL=postgresql://postgres:password@host:5432/postgres
+```
+
+The database connection is kept inside `.env` for security and is not pushed to GitHub.
+
+---
+
+### 2. Installed Database Dependencies
+
+Installed:
+
+```bash
+pip install sqlalchemy psycopg2-binary alembic
+```
+
+Updated dependencies:
+
+```bash
+pip freeze > requirements.txt
+```
+
+Purpose of each package:
+
+* `sqlalchemy` — ORM used to define and query database tables using Python classes.
+* `psycopg2-binary` — PostgreSQL driver used by SQLAlchemy.
+* `alembic` — migration tool used to create and update database tables safely.
+
+---
+
+### 3. Created Database Connection File
+
+Created `database.py`.
+
+Implemented:
+
+```python
+engine = create_engine(os.getenv("DATABASE_URL"))
+SessionLocal = sessionmaker(bind=engine)
+Base = declarative_base()
+```
+
+Also added:
+
+```python
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+```
+
+This creates a database session for each request and safely closes it after use.
+
+---
+
+### 4. Created SQLAlchemy Models
+
+Created database models for:
+
+* `User`
+* `Analysis`
+
+The models define the structure of database tables.
+
+User table stores:
+
+* User ID
+* Email
+* Hashed password
+* Created timestamp
+
+Analysis table stores:
+
+* Analysis ID
+* User ID
+* Resume filename
+* ATS score
+* Full Gemini JSON result
+* Created timestamp
+
+---
+
+### 5. Added Foreign Key Relationship
+
+Initially, `user_id` was only a normal string.
+
+Updated it to use a real foreign key:
+
+```python
+user_id = Column(
+    String,
+    ForeignKey("users.id"),
+    nullable=False
+)
+```
+
+This means every analysis must belong to a valid user.
+
+Also added SQLAlchemy relationships:
+
+```python
+analyses = relationship(
+    "Analysis",
+    back_populates="user"
+)
+```
+
+and:
+
+```python
+user = relationship(
+    "User",
+    back_populates="analyses"
+)
+```
+
+Final relationship:
+
+```text
+User
+  ↓
+One user can have many analyses
+
+Analysis
+  ↓
+Each analysis belongs to one user
+```
+
+---
+
+## Why Foreign Key Was Important
+
+Foreign keys protect database integrity.
+
+Without a foreign key, the database could store:
+
+```text
+analysis.user_id = "fake-user-id"
+```
+
+even if that user does not exist.
+
+With:
+
+```python
+ForeignKey("users.id")
+```
+
+PostgreSQL rejects invalid data.
+
+This prevents orphan records and keeps analysis history connected to real users.
+
+---
+
+## Alembic Migration Setup
+
+Initialized Alembic:
+
+```bash
+alembic init alembic
+```
+
+This created:
+
+```text
+alembic/
+alembic/versions/
+alembic.ini
+alembic/env.py
+```
+
+Purpose:
+
+* `alembic.ini` stores Alembic configuration.
+* `alembic/env.py` connects Alembic to SQLAlchemy models.
+* `alembic/versions/` stores migration files.
+
+---
+
+## Edited Alembic env.py
+
+Updated `alembic/env.py` to load:
+
+```python
+from database import Base
+import models
+```
+
+Configured metadata:
+
+```python
+target_metadata = Base.metadata
+```
+
+Configured database URL from `.env`:
+
+```python
+config.set_main_option(
+    "sqlalchemy.url",
+    os.getenv("DATABASE_URL")
+)
+```
+
+This allows Alembic to detect SQLAlchemy models and generate migrations automatically.
+
+---
+
+## Errors Encountered & Fixes
+
+### Error 1 — Wrong Git Path
+
+Command used:
+
+```bash
+git add database
+```
+
+Error:
+
+```text
+fatal: pathspec 'database' did not match any files
+```
+
+Cause:
+
+The file was named:
+
+```text
+database.py
+```
+
+not:
+
+```text
+database
+```
+
+Fix:
+
+```bash
+git add database.py
+```
+
+---
+
+### Error 2 — Alembic Default Driver Error
+
+Command:
+
+```bash
+alembic revision --autogenerate -m "create users and analyses tables"
+```
+
+Error:
+
+```text
+sqlalchemy.exc.NoSuchModuleError:
+Can't load plugin: sqlalchemy.dialects:driver
+```
+
+Cause:
+
+Alembic was still using the default fake URL:
+
+```text
+driver://user:pass@localhost/dbname
+```
+
+from `alembic.ini`.
+
+Fix:
+
+Updated `alembic/env.py` to load the real database URL from `.env`:
+
+```python
+load_dotenv()
+
+config = context.config
+
+config.set_main_option(
+    "sqlalchemy.url",
+    os.getenv("DATABASE_URL")
+)
+```
+
+---
+
+### Error 3 — Using config Before Defining It
+
+Problem:
+
+`config.set_main_option()` was written before:
+
+```python
+config = context.config
+```
+
+Cause:
+
+Python executes from top to bottom. `config` must exist before being used.
+
+Fix:
+
+Correct order:
+
+```python
+config = context.config
+
+config.set_main_option(
+    "sqlalchemy.url",
+    os.getenv("DATABASE_URL")
+)
+```
+
+---
+
+### Error 4 — Duplicate Alembic Config Code
+
+Problem:
+
+`target_metadata = Base.metadata` and `config.set_main_option()` were written multiple times.
+
+Cause:
+
+Code was pasted in multiple places inside `env.py`.
+
+Fix:
+
+Kept only one clean version:
+
+```python
+config = context.config
+
+config.set_main_option(
+    "sqlalchemy.url",
+    os.getenv("DATABASE_URL")
+)
+
+target_metadata = Base.metadata
+```
+
+---
+
+### Error 5 — Wrong Foreign Key String
+
+Incorrect code:
+
+```python
+ForeignKey("user_id")
+```
+
+Cause:
+
+ForeignKey must point to the target table and column.
+
+Correct code:
+
+```python
+ForeignKey("users.id")
+```
+
+Meaning:
+
+```text
+analyses.user_id → users.id
+```
+
+---
+
+### Error 6 — Wrong Relationship Import
+
+Incorrect import:
+
+```python
+from sqlalchemy.orm import Relationship
+```
+
+Cause:
+
+SQLAlchemy uses lowercase:
+
+```python
+relationship
+```
+
+Correct import:
+
+```python
+from sqlalchemy.orm import relationship
+```
+
+---
+
+### Error 7 — Supabase Password URL Problem
+
+Error:
+
+```text
+could not translate host name "2026@db.gwsqlrgnodlixdgqwthh.supabase.co" to address
+```
+
+Cause:
+
+The database password contained special character `@`.
+
+In a URL, `@` separates the password from the host, so PostgreSQL misunderstood the connection string.
+
+Example problem:
+
+```text
+postgresql://postgres:password@2026@db.supabase.co:5432/postgres
+```
+
+The host became:
+
+```text
+2026@db.supabase.co
+```
+
+which is invalid.
+
+Fix options:
+
+1. URL-encode `@` as:
+
+```text
+%40
+```
+
+or
+
+2. Reset the Supabase database password using only letters and numbers.
+
+Used the second option for a cleaner connection string.
+
+---
+
+## Commands Used
+
+Installed dependencies:
+
+```bash
+pip install sqlalchemy psycopg2-binary alembic
+pip freeze > requirements.txt
+```
+
+Initialized Alembic:
+
+```bash
+alembic init alembic
+```
+
+Generated migration:
+
+```bash
+alembic revision --autogenerate -m "create users and analyses tables"
+```
+
+Applied migration:
+
+```bash
+alembic upgrade head
+```
+
+Git commands:
+
+```bash
+git status
+
+git add database.py
+git add models_db.py
+git add alembic/
+git add alembic.ini
+git add requirements.txt
+
+git commit -m "feat: add SQLAlchemy models, PostgreSQL integration, and Alembic migrations"
+
+git push origin main
+```
+
+---
+
+## Concepts Learned
+
+### PostgreSQL
+
+A relational database used to store structured application data.
+
+---
+
+### Supabase
+
+A hosted PostgreSQL platform used to avoid local database setup.
+
+---
+
+### SQLAlchemy
+
+Python ORM used to represent database tables as Python classes.
+
+---
+
+### psycopg2
+
+Driver that lets Python connect to PostgreSQL.
+
+---
+
+### Alembic
+
+Migration tool used to version-control database schema changes.
+
+---
+
+### ORM
+
+Object Relational Mapping.
+
+It maps:
+
+```text
+Python Class → Database Table
+Python Object → Database Row
+```
+
+---
+
+### Primary Key
+
+A unique identifier for each row.
+
+Example:
+
+```python
+id = Column(String, primary_key=True)
+```
+
+---
+
+### Foreign Key
+
+A column that points to another table's primary key.
+
+Example:
+
+```python
+ForeignKey("users.id")
+```
+
+---
+
+### Relationship
+
+A SQLAlchemy helper that connects related Python objects.
+
+Example:
+
+```python
+user.analyses
+analysis.user
+```
+
+---
+
+### Migration
+
+A saved database schema change.
+
+Example:
+
+```text
+Create users table
+Create analyses table
+```
+
+---
+
+## Final Database Architecture
+
+```text
+users
+-----
+id
+email
+hashed_password
+created_at
+
+        ▲
+        │ Foreign Key
+        │
+analyses
+--------
+id
+user_id
+filename
+ats_score
+result_json
+created_at
+```
+
+---
+
+## Outcome
+
+Successfully set up the database foundation for the AI Resume Analyzer.
+
+The backend now has:
+
+* Supabase PostgreSQL connection
+* SQLAlchemy database configuration
+* User model
+* Analysis model
+* Foreign key relationship
+* Alembic migration setup
+* Secure environment-based database URL
+
+This prepares the project for upcoming features like user authentication, saving analysis history, and displaying previous resume reports.
 
 
 
