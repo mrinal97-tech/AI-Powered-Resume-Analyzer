@@ -3906,6 +3906,615 @@ The backend now has:
 
 This prepares the project for upcoming features like user authentication, saving analysis history, and displaying previous resume reports.
 
+# Day 16–17 DevLog — JWT Authentication, Password Hashing & Protected Routes
+
+## Goal
+
+Add authentication to the AI Resume Analyzer so users can register, log in securely, receive a JWT token, and access protected backend endpoints.
+
+---
+
+## Why Authentication Was Needed
+
+Before authentication, anyone could access the backend endpoints directly.
+
+The application flow was:
+
+```text
+Upload Resume
+   ↓
+Analyze Resume
+   ↓
+View Result
+```
+
+But there was no concept of:
+
+* Users
+* Login
+* Password security
+* User-specific analysis history
+* Protected API access
+
+After JWT authentication, the application can support:
+
+```text
+Register
+   ↓
+Login
+   ↓
+Receive JWT Token
+   ↓
+Access Protected Routes
+   ↓
+Save User-Specific Resume Analyses
+```
+
+---
+
+## Packages Installed
+
+Installed authentication libraries:
+
+```bash
+pip install python-jose passlib[bcrypt]
+```
+
+Updated dependencies:
+
+```bash
+pip freeze > requirements.txt
+```
+
+---
+
+## Package Purpose
+
+### python-jose
+
+Used for JWT token handling.
+
+It helps with:
+
+* Creating JWT tokens
+* Encoding user identity into a token
+* Decoding tokens
+* Verifying token authenticity
+* Detecting expired or invalid tokens
+
+### passlib[bcrypt]
+
+Used for password hashing and verification.
+
+Instead of storing plain passwords, the backend stores hashed passwords.
+
+Example:
+
+```text
+Plain password:
+Resume123
+
+Stored in database:
+$2b$12$...
+```
+
+This improves security if the database is ever exposed.
+
+---
+
+## Created Authentication Service
+
+Created:
+
+```text
+services/auth.py
+```
+
+This file contains all authentication helper functions.
+
+Implemented:
+
+```python
+hash_password()
+verify_password()
+create_token()
+decode_token()
+```
+
+---
+
+## Password Hashing
+
+Implemented:
+
+```python
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+```
+
+Purpose:
+
+* Takes a plain password from registration.
+* Converts it into a secure bcrypt hash.
+* Stores only the hash in PostgreSQL.
+
+This prevents storing sensitive plain-text passwords.
+
+---
+
+## Password Verification
+
+Implemented:
+
+```python
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain, hashed)
+```
+
+Purpose:
+
+* Compares login password with stored hashed password.
+* Returns `True` if the password is correct.
+* Returns `False` if incorrect.
+
+---
+
+## JWT Token Creation
+
+Implemented:
+
+```python
+def create_token(user_id: str) -> str:
+    payload = {
+        "sub": user_id,
+        "exp": datetime.utcnow() + timedelta(hours=24)
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+```
+
+Purpose:
+
+* Creates a signed JWT token after successful login.
+* Stores the user ID inside the token using the `sub` field.
+* Adds a 24-hour expiration time using the `exp` field.
+
+---
+
+## JWT Token Decoding
+
+Implemented:
+
+```python
+def decode_token(token: str) -> str:
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    return payload["sub"]
+```
+
+Purpose:
+
+* Verifies the token signature.
+* Checks whether the token is valid.
+* Extracts the user ID from the token.
+
+---
+
+## Environment Variable Added
+
+Added JWT secret key to `.env`:
+
+```env
+JWT_SECRET=your-long-random-secret-key
+```
+
+This key is used to sign and verify JWT tokens.
+
+Important security lesson:
+
+* Never hardcode JWT secrets in code.
+* Never commit `.env` to GitHub.
+* Use environment variables for secrets.
+
+---
+
+## Added Authentication Schemas
+
+Created request/response schemas for:
+
+* User registration
+* User login
+* Token response
+
+Example:
+
+```python
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+```
+
+These schemas validate incoming authentication requests.
+
+---
+
+## Register Route
+
+Added:
+
+```text
+POST /register
+```
+
+Purpose:
+
+* Accept email and password.
+* Check if email already exists.
+* Hash the password.
+* Save user in PostgreSQL.
+* Return user information.
+
+Flow:
+
+```text
+User submits email/password
+        ↓
+Check existing email
+        ↓
+Hash password
+        ↓
+Save user to database
+        ↓
+Return success response
+```
+
+---
+
+## Login Route
+
+Added:
+
+```text
+POST /login
+```
+
+Purpose:
+
+* Accept email and password.
+* Find user by email.
+* Verify password using bcrypt.
+* Generate JWT token.
+* Return token to frontend.
+
+Flow:
+
+```text
+User enters email/password
+        ↓
+Find user in database
+        ↓
+Verify password hash
+        ↓
+Create JWT token
+        ↓
+Return access token
+```
+
+Example response:
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer"
+}
+```
+
+---
+
+## Added Protected Route Dependency
+
+Implemented:
+
+```python
+get_current_user()
+```
+
+Purpose:
+
+* Read the `Authorization` header.
+* Extract the Bearer token.
+* Decode and verify the token.
+* Fetch the current user from PostgreSQL.
+* Reject invalid or expired tokens.
+
+Expected header:
+
+```text
+Authorization: Bearer <token>
+```
+
+---
+
+## Protected `/analyze` Endpoint
+
+Updated `/analyze` so only logged-in users can use it.
+
+Before:
+
+```python
+@app.post("/analyze")
+async def analyze(request: AnalysisRequest):
+```
+
+After:
+
+```python
+@app.post("/analyze")
+async def analyze(
+    request: AnalysisRequest,
+    current_user: User = Depends(get_current_user)
+):
+```
+
+Now the analysis endpoint requires authentication.
+
+---
+
+## Authentication Flow
+
+```text
+Register
+   ↓
+Password gets hashed
+   ↓
+User saved in PostgreSQL
+   ↓
+Login
+   ↓
+Password verified
+   ↓
+JWT token generated
+   ↓
+Frontend stores token
+   ↓
+Token sent in Authorization header
+   ↓
+FastAPI verifies token
+   ↓
+Protected endpoint allowed
+```
+
+---
+
+## Concepts Learned
+
+### Authentication
+
+Verifies who the user is.
+
+Example:
+
+```text
+Email + Password → Identity verified
+```
+
+### Authorization
+
+Controls what the authenticated user can access.
+
+Example:
+
+```text
+Only logged-in users can analyze resumes
+```
+
+### JWT
+
+A signed token that proves the user is authenticated.
+
+### Bearer Token
+
+A token sent in the request header.
+
+```text
+Authorization: Bearer <token>
+```
+
+### Password Hashing
+
+Converts plain passwords into secure irreversible hashes.
+
+### bcrypt
+
+A secure password hashing algorithm.
+
+### Token Expiration
+
+JWT tokens should expire after a certain time for security.
+
+### Protected Routes
+
+Routes that require a valid authenticated user.
+
+---
+
+## Errors and Debugging Notes
+
+### Missing JWT Secret
+
+Potential issue:
+
+If `JWT_SECRET` is not found in `.env`, the code falls back to:
+
+```text
+change-this-in-production
+```
+
+This is acceptable for local development but unsafe for production.
+
+Solution:
+
+Added a real `JWT_SECRET` in `.env`.
+
+---
+
+### Invalid Login Handling
+
+Handled cases where:
+
+* Email does not exist
+* Password is incorrect
+
+The API returns:
+
+```json
+{
+  "detail": "Invalid email or password"
+}
+```
+
+---
+
+### Missing Authorization Header
+
+Handled requests without a token.
+
+The API returns:
+
+```json
+{
+  "detail": "Authorization header missing"
+}
+```
+
+---
+
+### Invalid or Expired Token
+
+Handled invalid JWTs.
+
+The API returns:
+
+```json
+{
+  "detail": "Invalid or expired token"
+}
+```
+
+---
+
+## Testing Plan
+
+### 1. Register User
+
+```json
+{
+  "email": "mrinal@example.com",
+  "password": "Resume123"
+}
+```
+
+Expected:
+
+```json
+{
+  "message": "User registered successfully"
+}
+```
+
+---
+
+### 2. Login User
+
+```json
+{
+  "email": "mrinal@example.com",
+  "password": "Resume123"
+}
+```
+
+Expected:
+
+```json
+{
+  "access_token": "...",
+  "token_type": "bearer"
+}
+```
+
+---
+
+### 3. Access Protected Analyze Route
+
+Send header:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+Expected:
+
+* Valid token → analysis works
+* Missing token → unauthorized error
+* Invalid token → unauthorized error
+
+---
+
+## Final Backend Auth Architecture
+
+```text
+React Frontend
+      ↓
+Register/Login Request
+      ↓
+FastAPI Auth Routes
+      ↓
+PostgreSQL Users Table
+      ↓
+JWT Token Created
+      ↓
+React Stores Token
+      ↓
+Protected API Request
+      ↓
+FastAPI Verifies Token
+      ↓
+Gemini Analysis Allowed
+```
+
+---
+
+## Outcome
+
+Successfully added the authentication foundation for the AI Resume Analyzer.
+
+The backend now supports:
+
+* User registration
+* Secure password hashing
+* User login
+* JWT token generation
+* JWT token verification
+* Protected API endpoints
+* Database-backed user authentication
+
+This prepares the project for future features like:
+
+* User-specific analysis history
+* Saved resume reports
+* Dashboard per logged-in user
+* Secure frontend login flow
+* Logout functionality
+* Refresh tokens
+
+---
+
 
 
 
