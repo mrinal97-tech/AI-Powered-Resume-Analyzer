@@ -65,8 +65,11 @@ async def extract(file: UploadFile = File(...)):
         return {"text": text, "char_count": len(text)}
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-@app.post("/analyze", response_model=AnalysisResponse)
-async def analyze(request: AnalysisRequest):
+@app.post("/analyze")
+async def analyze(
+    request: AnalysisRequest,
+    current_user: User = Depends(get_current_user)
+):
     try:
         raw_json = analyze_resume(
             request.resume_text,
@@ -152,3 +155,46 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         "access_token": token,
         "token_type": "bearer"
     }
+    
+def get_current_user(
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="Authorization header missing"
+        )
+
+    try:
+        scheme, token = authorization.split()
+
+        if scheme.lower() != "bearer":
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authentication scheme"
+            )
+
+        user_id = decode_token(token)
+
+        user = db.query(User).filter(User.id == user_id).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=401,
+                detail="User not found"
+            )
+
+        return user
+
+    except JWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token"
+        )
+
+    except ValueError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authorization header"
+        )
