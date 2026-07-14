@@ -65,6 +65,51 @@ async def extract(file: UploadFile = File(...)):
         return {"text": text, "char_count": len(text)}
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+
+def get_current_user(
+    authorization: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="Authorization header missing"
+        )
+
+    try:
+        scheme, token = authorization.split()
+
+        if scheme.lower() != "bearer":
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authentication scheme"
+            )
+
+        user_id = decode_token(token)
+
+        user = db.query(User).filter(User.id == user_id).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=401,
+                detail="User not found"
+            )
+
+        return user
+
+    except JWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token"
+        )
+
+    except ValueError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authorization header"
+        )
+
 @app.post("/analyze")
 async def analyze(
     request: AnalysisRequest,
@@ -156,45 +201,3 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         "token_type": "bearer"
     }
     
-def get_current_user(
-    authorization: str = Header(None),
-    db: Session = Depends(get_db)
-):
-    if not authorization:
-        raise HTTPException(
-            status_code=401,
-            detail="Authorization header missing"
-        )
-
-    try:
-        scheme, token = authorization.split()
-
-        if scheme.lower() != "bearer":
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid authentication scheme"
-            )
-
-        user_id = decode_token(token)
-
-        user = db.query(User).filter(User.id == user_id).first()
-
-        if not user:
-            raise HTTPException(
-                status_code=401,
-                detail="User not found"
-            )
-
-        return user
-
-    except JWTError:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token"
-        )
-
-    except ValueError:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid authorization header"
-        )
