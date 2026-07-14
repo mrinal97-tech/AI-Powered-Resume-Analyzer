@@ -1,8 +1,16 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 import io
+from sqlalchemy.orm import Session
+from jose import JWTError
+
+from database import get_db
+from models_db import User
+from schemas import UserCreate, UserLogin, TokenResponse
+from services.auth import hash_password, verify_password, create_token, decode_token
 from fastapi.middleware.cors import CORSMiddleware
 from services.extractor import extract_resume_text
 from models import ExtractionResponse
+
 import json
 from fastapi.responses import StreamingResponse
 from services.llm import (
@@ -98,3 +106,26 @@ async def analyze_stream(
         ),
         media_type="text/plain"
     )
+@app.post("/register")
+def register(user: UserCreate, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.email == user.email).first()
+    
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+    new_user = User(
+        email=user.email,
+        hashed_password=hash_password(user.password)
+    )
+    
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return {
+        "message": "User registered successfully",
+        "user_id": new_user.id,
+        "email": new_user.email
+    }
