@@ -4,12 +4,12 @@ from sqlalchemy.orm import Session
 from jose import JWTError
 
 from database import get_db
-from models_db import User
+from models_db import Analysis,User
 from schemas import UserCreate, UserLogin, TokenResponse
 from services.auth import hash_password, verify_password, create_token, decode_token
 from fastapi.middleware.cors import CORSMiddleware
 from services.extractor import extract_resume_text
-from models import ExtractionResponse
+from models import ExtractionResponse,AnalysisHistoryItem
 
 import json
 from fastapi.responses import StreamingResponse
@@ -110,10 +110,11 @@ def get_current_user(
             detail="Invalid authorization header"
         )
 
-@app.post("/analyze")
+@app.post("/analyze", response_model=AnalysisResponse)
 async def analyze(
     request: AnalysisRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     try:
         raw_json = analyze_resume(
@@ -121,26 +122,37 @@ async def analyze(
             request.job_description
         )
 
-        print("JSON TO PARSE:")
-        print(raw_json)
-
         data = json.loads(raw_json)
 
-        return AnalysisResponse(**data)
+        validated_result = AnalysisResponse(**data)
 
-    except json.JSONDecodeError as e:
-        print("JSON ERROR:", e)
-        print("RAW RESPONSE:", raw_json)
+        new_analysis = Analysis(
+            user_id=current_user.id,
+            filename=request.filename,
+            ats_score=validated_result.ats_score,
+            result_json=json.dumps(
+                validated_result.model_dump()
+            )
+        )
 
+        db.add(new_analysis)
+        db.commit()
+        db.refresh(new_analysis)
+
+        return validated_result
+
+    except json.JSONDecodeError:
         raise HTTPException(
             status_code=500,
             detail="LLM returned invalid JSON"
         )
 
-    except Exception as e:
+    except Exception as error:
+        db.rollback()
+
         raise HTTPException(
             status_code=500,
-            detail=str(e)
+            detail=str(error)
         )
 @app.post("/analyze/stream")
 async def analyze_stream(
@@ -200,4 +212,29 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         "access_token": token,
         "token_type": "bearer"
     }
+@app.get(
+    "/history",
+    response_model=list[AnalysisHistoryItem]
+)
+def get_history(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    analyses = (
+        db.query(Analysis)
+        .filter(Analysis.user_id == current_user.id)
+        .order_by(Analysis.created_at.desc())
+        .all()
+    )
+
+    return [
+        AnalysisHistoryItem(
+            id=analysis.id,
+            filename=analysis.filename,
+            ats_score=analysis.ats_score,
+            result=json.loads(analysis.result_json),
+            created_at=analysis.created_at
+        )
+        for analysis in analyses
+    ]
     
