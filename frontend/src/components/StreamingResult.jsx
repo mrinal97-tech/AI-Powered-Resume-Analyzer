@@ -8,25 +8,31 @@ export default function StreamingResult({
   onAnalysisStart,
   onAnalysisError,
 }) {
+   const { token } = useAuth()
+
   const [loading, setLoading] = useState(false)
 
   const runAnalysis = async () => {
-    const { token } = useAuth()
+   
     setLoading(true)
     onAnalysisStart?.()
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/analyze`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            resume_text: resumeText,
-            job_description: jobDescription || null
-          })
-        }
-      )
+  `${import.meta.env.VITE_API_URL}/analyze`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      resume_text: resumeText,
+      job_description: jobDescription || null,
+      filename: filename || null
+    })
+  }
+)
 
       if (!response.ok) {
         const errBody = await response.text()
