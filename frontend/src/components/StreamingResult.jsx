@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext"
 
 export default function StreamingResult({
   resumeText,
@@ -10,6 +11,7 @@ export default function StreamingResult({
   const [loading, setLoading] = useState(false)
 
   const runAnalysis = async () => {
+    const { token } = useAuth()
     setLoading(true)
     onAnalysisStart?.()
 
