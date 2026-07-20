@@ -8,6 +8,7 @@ function App() {
   const [resumeText, setResumeText] = useState('')
   const [jobDescription, setJobDescription] = useState('')
   const [analysisData, setAnalysisData] = useState(null)
+  const [filename, setFilename] = useState("")
   const [analysisStatus, setAnalysisStatus] = useState('idle') // idle | loading | error | done
   const [analysisError, setAnalysisError] = useState(null)
 
@@ -50,7 +51,8 @@ function App() {
             <Card>
               <CardHeader eyebrow="Step 1" title="Upload resume" description="PDF or DOCX, up to one file." />
               <div className="p-6 pt-4">
-                <DropZone onExtracted={setResumeText} />
+                <DropZone onExtracted={setResumeText} 
+                onFilenameReceived={setFilename}/>
               </div>
             </Card>
 
