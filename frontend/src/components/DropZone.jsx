@@ -38,6 +38,12 @@ export default function DropZone({ onExtracted }) {
       setStatus("error")
     }
   }
+  const response = await axios.post(
+  `${import.meta.env.VITE_API_URL}/upload`,
+  formData
+)
+
+  onFilenameReceived?.(response.data.filename)
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
