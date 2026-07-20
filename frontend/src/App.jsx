@@ -72,7 +72,7 @@ function App() {
                   <StreamingResult
                     resumeText={resumeText}
                     jobDescription={jobDescription}
-                    filename={file?.name}
+                    filename={filename}
                     onAnalysisStart={() => { setAnalysisStatus('loading'); setAnalysisError(null) }}
                     onAnalysisComplete={handleAnalysisComplete}
                     onAnalysisError={(msg) => { setAnalysisStatus('error'); setAnalysisError(msg) }}
