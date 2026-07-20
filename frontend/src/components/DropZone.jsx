@@ -2,48 +2,54 @@ import { useDropzone } from "react-dropzone";
 import { useState } from "react";
 import axios from "axios";
 
-export default function DropZone({ onExtracted }) {
-  const [status, setStatus] = useState('idle')
+export default function DropZone({
+  onExtracted,
+  onFilenameReceived,
+}) {
+  const [status, setStatus] = useState("idle")
   const [error, setError] = useState(null)
   const [fileName, setFileName] = useState(null)
 
   const onDrop = async (acceptedFiles) => {
-    const file = acceptedFiles[0]
-    if (!file) return
+  const file = acceptedFiles[0]
 
-    setFileName(file.name)
-    setStatus('uploading')
-    setError(null)
+  if (!file) return
 
-    const formData = new FormData()
-    formData.append('file', file)
+  setFileName(file.name)
+  setStatus("uploading")
+  setError(null)
 
-    try {
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/extract`,
-        formData
-      )
-      onExtracted(res.data.text)
-      setStatus('done')
-    } catch (err) {
-      console.error("FULL ERROR:", err)
-      console.error("RESPONSE:", err.response)
-      console.error("DATA:", err.response?.data)
+  const formData = new FormData()
+  formData.append("file", file)
 
-      setError(
-        JSON.stringify(err.response?.data) ||
-        err.message ||
-        "Upload failed"
-      )
-      setStatus("error")
-    }
+  try {
+    const uploadResponse = await axios.post(
+      `${import.meta.env.VITE_API_URL}/upload`,
+      formData
+    )
+
+    onFilenameReceived?.(uploadResponse.data.filename)
+
+    const extractResponse = await axios.post(
+      `${import.meta.env.VITE_API_URL}/extract`,
+      formData
+    )
+
+    onExtracted?.(extractResponse.data.text)
+
+    setStatus("done")
+  } catch (err) {
+    console.error(err)
+
+    setError(
+      err.response?.data?.detail ||
+      err.message ||
+      "Upload failed"
+    )
+
+    setStatus("error")
   }
-  const response = await axios.post(
-  `${import.meta.env.VITE_API_URL}/upload`,
-  formData
-)
-
-  onFilenameReceived?.(response.data.filename)
+}
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
