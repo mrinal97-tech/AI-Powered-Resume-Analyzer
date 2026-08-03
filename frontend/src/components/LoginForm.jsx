@@ -1,18 +1,19 @@
 import { useState } from "react"
-import { useAuth } from "../context/AuthContext"
+import { useAuth } from "../Context/AuthContext"
 
 export default function LoginForm({
-  onSwitchToRegister
+  onSwitchToRegister,
 }) {
   const { login } = useAuth()
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const handleLogin = async (event) => {
     event.preventDefault()
+
     setLoading(true)
     setError("")
 
@@ -22,12 +23,12 @@ export default function LoginForm({
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             email,
-            password
-          })
+            password,
+          }),
         }
       )
 
@@ -39,9 +40,20 @@ export default function LoginForm({
         )
       }
 
+      if (!data.access_token) {
+        throw new Error(
+          "Login succeeded, but no access token was returned"
+        )
+      }
+
       login(data.access_token, email)
     } catch (error) {
-      setError(error.message)
+      console.error("Login error:", error)
+
+      setError(
+        error.message ||
+          "Unable to log in. Please try again."
+      )
     } finally {
       setLoading(false)
     }
@@ -50,55 +62,109 @@ export default function LoginForm({
   return (
     <form
       onSubmit={handleLogin}
-      className="space-y-4"
+      className="space-y-5"
     >
-      <h2 className="text-2xl font-bold">
-        Welcome back
-      </h2>
+      <div>
+        <h2 className="text-2xl font-semibold text-gray-900">
+          Welcome back
+        </h2>
 
-      <input
-        type="email"
-        required
-        value={email}
-        onChange={(event) =>
-          setEmail(event.target.value)
-        }
-        placeholder="Email"
-        className="w-full border rounded-lg p-3"
-      />
+        <p className="mt-1 text-sm text-gray-500">
+          Log in to analyze your resume and view
+          your saved results.
+        </p>
+      </div>
 
-      <input
-        type="password"
-        required
-        value={password}
-        onChange={(event) =>
-          setPassword(event.target.value)
-        }
-        placeholder="Password"
-        className="w-full border rounded-lg p-3"
-      />
+      <div>
+        <label
+          htmlFor="login-email"
+          className="mb-1.5 block text-sm font-medium text-gray-700"
+        >
+          Email address
+        </label>
+
+        <input
+          id="login-email"
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(event) =>
+            setEmail(event.target.value)
+          }
+          placeholder="mrinal@example.com"
+          className="w-full rounded-xl border border-gray-200 px-4 py-3
+                     text-sm text-gray-900 outline-none transition
+                     placeholder:text-gray-400
+                     focus:border-indigo-500 focus:ring-2
+                     focus:ring-indigo-100"
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="login-password"
+          className="mb-1.5 block text-sm font-medium text-gray-700"
+        >
+          Password
+        </label>
+
+        <input
+          id="login-password"
+          type="password"
+          required
+          autoComplete="current-password"
+          value={password}
+          onChange={(event) =>
+            setPassword(event.target.value)
+          }
+          placeholder="Enter your password"
+          className="w-full rounded-xl border border-gray-200 px-4 py-3
+                     text-sm text-gray-900 outline-none transition
+                     placeholder:text-gray-400
+                     focus:border-indigo-500 focus:ring-2
+                     focus:ring-indigo-100"
+        />
+      </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="rounded-xl border border-red-200 bg-red-50
+                     px-4 py-3 text-sm text-red-700"
+        >
+          {error}
+        </div>
+      )}
 
       <button
-        disabled={loading}
-        className="w-full bg-purple-600 text-white
-                   rounded-lg py-3 disabled:opacity-50"
+        type="submit"
+        disabled={
+          loading || !email.trim() || !password
+        }
+        className="w-full rounded-xl bg-indigo-600 px-5 py-3
+                   text-sm font-medium text-white transition
+                   hover:bg-indigo-700 active:bg-indigo-800
+                   disabled:cursor-not-allowed
+                   disabled:opacity-50"
       >
         {loading ? "Logging in..." : "Login"}
       </button>
 
-      {error && (
-        <p className="text-sm text-red-600">
-          {error}
+      <div className="text-center">
+        <p className="text-sm text-gray-500">
+          Don&apos;t have an account?
         </p>
-      )}
 
-      <button
-        type="button"
-        onClick={onSwitchToRegister}
-        className="text-purple-600 text-sm"
-      >
-        Create a new account
-      </button>
+        <button
+          type="button"
+          onClick={onSwitchToRegister}
+          className="mt-1 text-sm font-medium text-indigo-600
+                     hover:text-indigo-700"
+        >
+          Create a new account
+        </button>
+      </div>
     </form>
   )
 }
