@@ -1,23 +1,31 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException,Depends,Header
+from fastapi import FastAPI, UploadFile, File, HTTPException,Depends,Header,status
 import io
 from sqlalchemy.orm import Session
 from jose import JWTError
+from fastapi.security import OAuth2PasswordBearer
 
-from database import get_db
+from database import get_db,engine,Base
 from models_db import Analysis,User
 from schemas import UserCreate, UserLogin, TokenResponse
 from services.auth import hash_password, verify_password, create_token, decode_token
 from fastapi.middleware.cors import CORSMiddleware
 from services.extractor import extract_resume_text
+from services.auth import decode_token
+
 from models import ExtractionResponse,AnalysisHistoryItem
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
 
 import json
 from fastapi.responses import StreamingResponse
+
 from services.llm import (
     analyze_resume,
     stream_analysis
 )
 from models import AnalysisRequest, AnalysisResponse
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -57,58 +65,49 @@ async def Upload_resume(file:UploadFile = File(...)):
         "content_type":file.content_type,
         "size_bytes":len(contents)
     }
-@app.post("/extract",response_model=ExtractionResponse)
+@app.post("/extract", response_model=ExtractionResponse)
 async def extract(file: UploadFile = File(...)):
     contents = await file.read()
+
     try:
         text = extract_resume_text(contents, file.content_type)
-        return {"text": text, "char_count": len(text)}
+
+        return {
+            "filename": file.filename,
+            "text": text,
+            "char_count": len(text)
+        }
+
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(
+            status_code=422,
+            detail=str(e)
+        )
 
 
 def get_current_user(
-    authorization: str = Header(None),
-    db: Session = Depends(get_db)
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
 ):
-    if not authorization:
-        raise HTTPException(
-            status_code=401,
-            detail="Authorization header missing"
-        )
-
     try:
-        scheme, token = authorization.split()
-
-        if scheme.lower() != "bearer":
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid authentication scheme"
-            )
-
         user_id = decode_token(token)
-
-        user = db.query(User).filter(User.id == user_id).first()
-
-        if not user:
-            raise HTTPException(
-                status_code=401,
-                detail="User not found"
-            )
-
-        return user
-
-    except JWTError:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token"
-        )
-
     except ValueError:
         raise HTTPException(
-            status_code=401,
-            detail="Invalid authorization header"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
         )
+
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+
+    return user
+
+
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze(
@@ -127,13 +126,32 @@ async def analyze(
         validated_result = AnalysisResponse(**data)
 
         new_analysis = Analysis(
-            user_id=current_user.id,
-            filename=request.filename,
-            ats_score=validated_result.ats_score,
-            result_json=json.dumps(
-                validated_result.model_dump()
-            )
-        )
+    user_id=current_user.id,
+
+    filename=request.filename,
+
+    resume_text=request.resume_text,
+
+    job_description=request.job_description,
+
+    ats_score=validated_result.ats_score,
+
+    skills_found=json.dumps(
+        validated_result.skills_found
+    ),
+
+    missing_skills=json.dumps(
+        validated_result.missing_skills
+    ),
+
+    improvement_suggestions=json.dumps(
+        validated_result.improvement_suggestions
+    ),
+
+    experience_level=validated_result.experience_level,
+
+    summary=validated_result.summary,
+)
 
         db.add(new_analysis)
         db.commit()
@@ -227,14 +245,19 @@ def get_history(
         .all()
     )
 
-    return [
-        AnalysisHistoryItem(
-            id=analysis.id,
-            filename=analysis.filename,
-            ats_score=analysis.ats_score,
-            result=json.loads(analysis.result_json),
-            created_at=analysis.created_at
+    history = []
+
+    for analysis in analyses:
+        history.append(
+            AnalysisHistoryItem(
+                id=analysis.id,
+                filename=analysis.filename,
+                ats_score=analysis.ats_score,
+                experience_level=analysis.experience_level,
+                summary=analysis.summary,
+                created_at=analysis.created_at,
+            )
         )
-        for analysis in analyses
-    ]
+
+    return history
     
