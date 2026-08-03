@@ -1,30 +1,108 @@
-from sqlalchemy import Column, String, Integer, Text, DateTime,ForeignKey
-from sqlalchemy.sql import func
-import uuid
-from database import Base
+from datetime import datetime
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
+from database import Base
+
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    email = Column(String, unique=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    created_at = Column(DateTime, server_default=func.now())
-    # One user has many analyses
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    email = Column(
+        String,
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+
+    hashed_password = Column(
+        String,
+        nullable=False,
+    )
+
     analyses = relationship(
         "Analysis",
-        back_populates="user"
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
+
 
 class Analysis(Base):
     __tablename__ = "analyses"
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String,ForeignKey("user.id"), nullable=False)
-    filename = Column(String)
-    ats_score = Column(Integer)
-    result_json = Column(Text)
-    created_at = Column(DateTime, server_default=func.now())
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    filename = Column(
+        String,
+        nullable=True,
+    )
+
+    resume_text = Column(
+        Text,
+        nullable=False,
+    )
+
+    job_description = Column(
+        Text,
+        nullable=True,
+    )
+
+    ats_score = Column(
+        Integer,
+        nullable=True,
+    )
+
+    skills_found = Column(
+        Text,
+        nullable=True,
+    )
+
+    missing_skills = Column(
+        Text,
+        nullable=True,
+    )
+
+    improvement_suggestions = Column(
+        Text,
+        nullable=True,
+    )
+
+    experience_level = Column(
+        String,
+        nullable=True,
+    )
+
+    summary = Column(
+        Text,
+        nullable=True,
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+    )
+
     user = relationship(
         "User",
-        back_populates="analyses"
+        back_populates="analyses",
     )
+    
