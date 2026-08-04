@@ -4590,6 +4590,67 @@ POST /extract
 
 Successfully authenticated users and extracted resume text from uploaded documents.
 
+# AI Resume Analyzer – Day 19 Development Log
+
+## Goal
+
+Integrate Google Gemini AI for ATS resume analysis.
+
+## Features Implemented
+
+### Gemini Integration
+
+* Connected Gemini API.
+* Designed structured ATS analysis prompt.
+* Forced JSON-only responses.
+* Parsed Gemini response.
+* Implemented response validation using Pydantic.
+
+### Analysis Engine
+
+Generated
+
+* ATS Score
+* Skills Found
+* Missing Skills
+* Improvement Suggestions
+* Experience Level
+* Professional Summary
+
+### Backend
+
+Created
+
+POST /analyze
+
+Validated LLM JSON.
+
+Stored AI analysis inside PostgreSQL.
+
+### Frontend
+
+Built
+
+* ATS Score Circle
+* Skills Chips
+* Missing Skills
+* Suggestions Section
+* Summary Card
+* Experience Badge
+
+## Skills Learned
+
+* Prompt Engineering
+* JSON Schema Validation
+* Gemini API
+* FastAPI Response Models
+* React State Management
+
+## Outcome
+
+Successfully built an AI-powered ATS resume analyzer using Google Gemini.
+
+
 
 
 
