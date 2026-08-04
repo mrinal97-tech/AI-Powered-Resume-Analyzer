@@ -4650,6 +4650,76 @@ Built
 
 Successfully built an AI-powered ATS resume analyzer using Google Gemini.
 
+# AI Resume Analyzer – Day 20 Development Log
+
+## Goal
+
+Persist AI analyses and display previous resume analyses.
+
+## Features Implemented
+
+### Database
+
+Redesigned Analysis table.
+
+Stored
+
+* ATS Score
+* Summary
+* Experience Level
+* Skills Found
+* Missing Skills
+* Suggestions
+
+instead of storing raw JSON.
+
+### History
+
+Created
+
+GET /history
+
+Returns
+
+* Filename
+* ATS Score
+* Experience Level
+* Summary
+* Timestamp
+
+### UI
+
+Built Analysis History component.
+
+Displayed
+
+* Resume filename
+* ATS Score
+* Experience Level
+* Summary Preview
+* Date & Time
+
+### Refactoring
+
+Removed result_json dependency.
+
+Updated SQLAlchemy models.
+
+Updated Pydantic schemas.
+
+Refactored API responses.
+
+## Skills Learned
+
+* Database Design
+* SQLAlchemy Relationships
+* API Refactoring
+* Production Data Modeling
+
+## Outcome
+
+Implemented persistent resume history with production-ready database design.
+
 
 
 
