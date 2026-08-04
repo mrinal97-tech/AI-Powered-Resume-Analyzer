@@ -4515,6 +4515,80 @@ This prepares the project for future features like:
 
 ---
 
+# AI Resume Analyzer – Day 18 Development Log
+
+## Date
+
+03 August 2026
+
+## Goal
+
+Implement secure authentication and establish the complete resume upload pipeline.
+
+## Features Implemented
+
+### Authentication
+
+* Implemented user registration.
+* Added login endpoint.
+* Integrated JWT-based authentication.
+* Protected backend endpoints using dependency injection.
+* Stored hashed passwords using bcrypt.
+* Created authentication middleware for current user retrieval.
+
+### Database
+
+* Created User model.
+* Added SQLAlchemy relationships.
+* Connected Supabase PostgreSQL database.
+* Implemented authentication queries.
+
+### Resume Upload
+
+* Added PDF/DOCX upload endpoint.
+* Implemented file validation.
+* Created upload service.
+* Added drag-and-drop interface in React.
+
+### Resume Extraction
+
+* Implemented text extraction service.
+* Added support for:
+
+  * PDF
+  * DOCX
+* Returned extracted text and character count.
+
+### Frontend
+
+* Login page
+* Register page
+* Protected routes
+* Resume upload component
+* Upload success notification
+
+## APIs Completed
+
+POST /register
+
+POST /login
+
+POST /upload
+
+POST /extract
+
+## Skills Learned
+
+* JWT Authentication
+* FastAPI Dependency Injection
+* SQLAlchemy Relationships
+* File Upload Handling
+* Password Hashing
+* React Authentication Flow
+
+## Outcome
+
+Successfully authenticated users and extracted resume text from uploaded documents.
 
 
 
