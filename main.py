@@ -11,6 +11,7 @@ from services.auth import hash_password, verify_password, create_token, decode_t
 from fastapi.middleware.cors import CORSMiddleware
 from services.extractor import extract_resume_text
 from services.auth import decode_token
+from services.llm import analyze_resume_with_retry
 
 from models import ExtractionResponse,AnalysisHistoryItem
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -116,11 +117,10 @@ async def analyze(
     db: Session = Depends(get_db)
 ):
     try:
-        raw_json = analyze_resume(
+        raw_json = analyze_resume_with_retry(
             request.resume_text,
             request.job_description
-        )
-
+)
         data = json.loads(raw_json)
 
         validated_result = AnalysisResponse(**data)
