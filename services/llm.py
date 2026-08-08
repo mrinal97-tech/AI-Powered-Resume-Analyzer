@@ -2,6 +2,7 @@ import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 from pathlib import Path
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Load environment variables
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
@@ -109,7 +110,28 @@ def analyze_resume(
 
     except Exception as e:
      raise ValueError(f"Gemini API Error: {str(e)}")
-   
+    
+
+
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(
+        multiplier=1,
+        min=1,
+        max=10
+    ),
+    reraise=True
+)
+def analyze_resume_with_retry(
+    resume_text: str,
+    job_description: str = None,
+) -> str:
+
+    return analyze_resume(
+        resume_text,
+        job_description
+    )
 # ==========================================
 # STREAMING VERSION
 # ==========================================
